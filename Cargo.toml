@@ -1,0 +1,16 @@
+[package]
+name = "equito_bot"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+
+
+[[bin]]
+name = "bot"
+path = "src/main.rs"
+
+[dependencies]
+ethers = "2.0.14"
+eyre = "0.6.12"
+serde = { version = "1.0.215", features = ["derive"] } 
+tokio = {version = "1.42.0", features = ["full"]}
