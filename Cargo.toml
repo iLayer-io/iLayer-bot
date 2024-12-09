@@ -10,7 +10,8 @@ name = "bot"
 path = "src/main.rs"
 
 [dependencies]
-ethers = "2.0.14"
+alloy = { version = "0.7.3", features = ["full"] }
 eyre = "0.6.12"
+futures-util = "0.3.31"
 serde = { version = "1.0.215", features = ["derive"] } 
 tokio = {version = "1.42.0", features = ["full"]}
