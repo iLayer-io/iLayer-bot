@@ -4,6 +4,8 @@ use futures_util::StreamExt;
 use log::info;
 use alloy::rpc::types::Log;
 
+use crate::config::AppConfig;
+
 fn parse_log(log: &Log) -> (U256, U256, U256) {
     let data = &log.data().data;
     let param1= U256::from_be_bytes::<32>(data[0..32].try_into().unwrap());
@@ -12,15 +14,15 @@ fn parse_log(log: &Log) -> (U256, U256, U256) {
     (param1, param2, param3)
 }
 
-pub async fn run_subscription_worker() -> Result<()> {
-    info!("Subscription worker routine is starting...");
-    let rpc_url = "ws://127.0.0.1:8545";
+pub async fn run_subscription_worker(config: &AppConfig) -> Result<()> {
+    let url = &config.ws_url;
+    info!("Subscription worker routine is starting with URL: {}", url);
     let address = address!("700b6A60ce7EaaEA56F065753d8dcB9653dbAD35");
     let from_block = 0;
     let event_name = "OrderCreated(uint256,uint256,uint256)";
 
     let provider = ProviderBuilder::new()
-        .on_builtin(rpc_url)
+        .on_builtin(url)
         .await?;
 
     let filter = Filter::new()
@@ -41,15 +43,15 @@ pub async fn run_subscription_worker() -> Result<()> {
     Ok(())
 }
 
-pub async fn run_poll_worker() -> Result<()> {
-    info!("Poll worker routine is starting...");
-    let rpc_url = "http://127.0.0.1:8545";
+pub async fn run_poll_worker(config: &AppConfig)  -> Result<()> {
+    let url = &config.rpc_url;
+    info!("Poll worker routine is starting with URL: {}", url);
     let address = address!("700b6A60ce7EaaEA56F065753d8dcB9653dbAD35");
     let from_block = 0;
     let event_name = "OrderCreated(uint256,uint256,uint256)";
 
     let provider = ProviderBuilder::new()
-        .on_builtin(rpc_url)
+        .on_builtin(url)
         .await?;
 
     let filter = Filter::new()
