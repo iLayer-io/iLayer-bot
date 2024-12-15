@@ -1,4 +1,5 @@
 use alloy::rpc::types::Log;
+use alloy::sol_types::SolEvent;
 use alloy::{
     primitives::{Address, U256},
     providers::{Provider, ProviderBuilder},
@@ -9,6 +10,7 @@ use futures_util::StreamExt;
 use slog::info;
 
 use crate::context::AppContext;
+use crate::solidity::OrderCreated;
 
 const EVENT_SIG: &str = "OrderCreated(uint256,uint256,uint256)";
 
@@ -63,8 +65,9 @@ pub async fn run_ordercreated_poll_worker(context: &AppContext) -> Result<()> {
     info!(context.logger, "Reading logs...");
     let sub = provider.get_logs(&filter).await?;
     for log in sub {
-        let (param1, param2, param3) = parse_log(&log);
-        info!(context.logger, "Worker processing log"; "param1" => format!("{:?}", param1), "param2" => format!("{:?}", param2), "param3" => format!("{:?}", param3));
+        let order_created = OrderCreated::abi_decode_data(log.data().data.as_ref(), false);
+        info!(context.logger, "Worker processing log"; "order" => format!("{:#?}", order_created), "log" => format!("{:#?}", log));
+        // info!(context.logger, "Worker processing log"; "param1" => format!("{:?}", param1), "param2" => format!("{:?}", param2), "param3" => format!("{:?}", param3));
     }
 
     info!(context.logger, "Routine terminated!");
