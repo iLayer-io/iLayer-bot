@@ -20,7 +20,7 @@ fn parse_log(log: &Log) -> (U256, U256, U256) {
     (param1, param2, param3)
 }
 
-pub async fn run_subscription_worker(context: &AppContext) -> Result<()> {
+pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Result<()> {
     let url = &context.config.ws_url;
     let address: Address = context.config.order_contract_address.parse()?;
     let from_block = context.config.from_block.unwrap_or(0);
@@ -47,7 +47,7 @@ pub async fn run_subscription_worker(context: &AppContext) -> Result<()> {
     Ok(())
 }
 
-pub async fn run_poll_worker(context: &AppContext) -> Result<()> {
+pub async fn run_ordercreated_poll_worker(context: &AppContext) -> Result<()> {
     let url = &context.config.rpc_url;
     let address: Address = context.config.order_contract_address.parse()?;
     let from_block = context.config.from_block.unwrap_or(0);

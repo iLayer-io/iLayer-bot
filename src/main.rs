@@ -20,14 +20,14 @@ async fn main() -> Result<()> {
     let worker_handle = {
         let config = Arc::clone(&app_context);
         tokio::spawn(async move {
-            worker::run_subscription_worker(&config).await
+            worker::run_ordercreated_subscription_worker(&config).await
         })
     };
 
     let poll_worker_handle = {
         let config = Arc::clone(&app_context);
         tokio::spawn(async move {
-            worker::run_poll_worker(&config).await
+            worker::run_ordercreated_poll_worker(&config).await
         })
     };
 
