@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
         tokio::spawn(async move {
             worker::run_ordercreated_poll_worker(&config).await
         })
-    };
+    }; 
 
     let (worker_result, poll_worker_result) = tokio::join!(worker_handle, poll_worker_handle);
 

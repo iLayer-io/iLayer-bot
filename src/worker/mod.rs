@@ -22,10 +22,11 @@ pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Resul
 
     let filter = Filter::new()
         .address(address)
-        .events([Orderbook::OrderCreated::SIGNATURE,
-            Orderbook::OrderExpired::SIGNATURE,
+        .events([
+            Orderbook::OrderCreated::SIGNATURE,
+            Orderbook::OrderWithdrawn::SIGNATURE,
             Orderbook::OrderFilled::SIGNATURE,
-            ])
+        ])
         .from_block(from_block);
 
     let sub = provider.subscribe_logs(&filter).await?;
@@ -33,7 +34,6 @@ pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Resul
 
     info!(context.logger, "Reading logs...");
     while let Some(log) = stream.next().await {
-
         let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
         match order_created {
             Ok(log) => {
@@ -60,6 +60,71 @@ pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Resul
             }
         }
 
+        let order_withdrawn = Orderbook::OrderWithdrawn::decode_log(&log.inner, false);
+        match order_withdrawn {
+            Ok(log) => {
+                // Process the log if decoding was successful
+                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
+                continue;
+            }
+            Err(e) => {
+                // Handle the error if decoding failed
+                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
+            }
+        }
+
+        warn!(context.logger, "Unable to decode log"; "log" => format!("{:?}", log));
+    }
+
+    info!(context.logger, "Subscription routine terminated!");
+    Ok(())
+}
+
+pub async fn run_ordercreated_poll_worker(context: &AppContext) -> Result<()> {
+    let url = &context.config.rpc_url;
+    let address: Address = context.config.order_contract_address.parse()?;
+    let from_block = context.config.from_block.unwrap_or(0);
+    info!(context.logger, "Poll worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => from_block);
+
+    let provider = ProviderBuilder::new().on_builtin(url).await?;
+
+    let filter = Filter::new()
+        .address(address)
+        .events([
+            Orderbook::OrderCreated::SIGNATURE,
+            Orderbook::OrderWithdrawn::SIGNATURE,
+            Orderbook::OrderFilled::SIGNATURE,
+        ])
+        .from_block(from_block);
+
+    info!(context.logger, "Reading logs...");
+    let sub = provider.get_logs(&filter).await?;
+    for log in sub {
+        let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
+        match order_created {
+            Ok(log) => {
+                // Process the log if decoding was successful
+                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
+                continue;
+            }
+            Err(e) => {
+                // Handle the error if decoding failed
+                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
+            }
+        }
+
+        let order_filled = Orderbook::OrderFilled::decode_log(&log.inner, false);
+        match order_filled {
+            Ok(log) => {
+                // Process the log if decoding was successful
+                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
+                continue;
+            }
+            Err(e) => {
+                // Handle the error if decoding failed
+                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
+            }
+        }
 
         let order_withdrawn = Orderbook::OrderWithdrawn::decode_log(&log.inner, false);
         match order_withdrawn {
@@ -75,33 +140,8 @@ pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Resul
         }
 
         warn!(context.logger, "Unable to decode log"; "log" => format!("{:?}", log));
-
     }
 
-    info!(context.logger, "Routine terminated!");
-    Ok(())
-}
-
-pub async fn run_ordercreated_poll_worker(context: &AppContext) -> Result<()> {
-    let url = &context.config.rpc_url;
-    let address: Address = context.config.order_contract_address.parse()?;
-    let from_block = context.config.from_block.unwrap_or(0);
-    info!(context.logger, "Poll worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => from_block);
-
-    let provider = ProviderBuilder::new().on_builtin(url).await?;
-
-    let filter = Filter::new()
-        .address(address)
-        .event(Orderbook::OrderCreated::SIGNATURE)
-        .from_block(from_block);
-
-    info!(context.logger, "Reading logs...");
-    let sub = provider.get_logs(&filter).await?;
-    for log in sub {
-        let order_created = OrderCreated::decode_log_data(log.data(), false);
-        info!(context.logger, "Worker processing log"; "order" => format!("{:?}", order_created), "log" => format!("{:?}", log));
-    }
-
-    info!(context.logger, "Routine terminated!");
+    info!(context.logger, "Polling routine terminated!");
     Ok(())
 }
