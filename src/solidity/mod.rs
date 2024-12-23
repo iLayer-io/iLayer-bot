@@ -2,6 +2,68 @@ use alloy::sol;
 
 sol!(
     #[allow(missing_docs)]
+    #[sol(rpc)]
+    Counter,
+    "abi/Counter.json"
+);
+
+// TODO Wait for the fix to be tagged, then remove this.
+sol!(
+    #[allow(missing_docs)]
+    #[derive(Debug, PartialEq, Eq)]
+    struct _bytes64 {
+        bytes32 lower;
+        bytes32 upper;
+    }
+);
+
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    Orderbook,
+    "abi/Orderbook.abi.json"
+);
+
+impl std::fmt::Debug for Validator::Order {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Order")
+        .field("sourceChainSelector", &self.sourceChainSelector)
+            .field("filler", &self.filler)
+            .field("primaryFillerDeadline", &self.primaryFillerDeadline)
+            .field("deadline", &self.deadline)
+            .finish()
+    }
+
+}
+impl std::fmt::Debug for Orderbook::OrderCreated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OrderCreated")
+            .field("order", &self.order)
+            .field("orderId", &self.orderId)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for Orderbook::OrderWithdrawn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OrderWithdrawn")
+            .field("caller", &self.caller)
+            .field("orderId", &self.orderId)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for Orderbook::OrderFilled {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OrderFilled")
+            .field("filler", &self.filler)
+            .field("orderId", &self.orderId)
+            .finish()
+    }
+}
+
+sol!(
+    #[allow(missing_docs)]
     #[derive(Debug, PartialEq, Eq)]
     event OrderCreated(uint256 chainId, uint256 coinId, uint256 amount);
 );

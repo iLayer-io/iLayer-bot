@@ -10,7 +10,7 @@ name = "bot"
 path = "src/main.rs"
 
 [dependencies]
-alloy = { version = "0.7.3", features = ["full"] }
+alloy = { version = "0.8.3", features = ["full"] }
 config = "0.14.1"
 dotenv = "0.15.0"
 eyre = "0.6.12"
