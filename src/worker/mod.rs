@@ -1,15 +1,39 @@
+use alloy::rpc::types::Log;
 use alloy::sol_types::{SolError, SolEvent};
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder},
     rpc::types::Filter,
 };
-use eyre::Result;
+use eyre::{Ok, Result};
 use futures_util::StreamExt;
 use slog::{debug, info, warn};
 
 use crate::context::AppContext;
 use crate::solidity::{OrderCreated, Orderbook};
+
+pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
+    let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
+    if order_created.is_ok() {
+        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_created.unwrap()));
+        return Ok(());
+    }
+
+    let order_filled = Orderbook::OrderFilled::decode_log(&log.inner, false);
+    if order_filled.is_ok() {
+        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_filled.unwrap()));
+        return Ok(());
+    }
+
+    let order_withdrawn = Orderbook::OrderWithdrawn::decode_log(&log.inner, false);
+    if order_withdrawn.is_ok() {
+        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_withdrawn.unwrap()));
+        return Ok(());
+    }
+
+    warn!(context.logger, "Unable to decode log"; "log" => format!("{:?}", log));
+    Err(eyre::eyre!("Unable to decode log"))
+}
 
 pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Result<()> {
     let url = &context.config.ws_url;
@@ -34,46 +58,7 @@ pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Resul
 
     info!(context.logger, "Reading logs...");
     while let Some(log) = stream.next().await {
-        let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
-        match order_created {
-            Ok(log) => {
-                // Process the log if decoding was successful
-                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
-                continue;
-            }
-            Err(e) => {
-                // Handle the error if decoding failed
-                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
-            }
-        }
-
-        let order_filled = Orderbook::OrderFilled::decode_log(&log.inner, false);
-        match order_filled {
-            Ok(log) => {
-                // Process the log if decoding was successful
-                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
-                continue;
-            }
-            Err(e) => {
-                // Handle the error if decoding failed
-                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
-            }
-        }
-
-        let order_withdrawn = Orderbook::OrderWithdrawn::decode_log(&log.inner, false);
-        match order_withdrawn {
-            Ok(log) => {
-                // Process the log if decoding was successful
-                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
-                continue;
-            }
-            Err(e) => {
-                // Handle the error if decoding failed
-                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
-            }
-        }
-
-        warn!(context.logger, "Unable to decode log"; "log" => format!("{:?}", log));
+        process_log(context, log).await?;
     }
 
     info!(context.logger, "Subscription routine terminated!");
@@ -99,49 +84,10 @@ pub async fn run_ordercreated_poll_worker(context: &AppContext) -> Result<()> {
 
     info!(context.logger, "Reading logs...");
     let sub = provider.get_logs(&filter).await?;
+
     for log in sub {
-        let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
-        match order_created {
-            Ok(log) => {
-                // Process the log if decoding was successful
-                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
-                continue;
-            }
-            Err(e) => {
-                // Handle the error if decoding failed
-                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
-            }
-        }
-
-        let order_filled = Orderbook::OrderFilled::decode_log(&log.inner, false);
-        match order_filled {
-            Ok(log) => {
-                // Process the log if decoding was successful
-                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
-                continue;
-            }
-            Err(e) => {
-                // Handle the error if decoding failed
-                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
-            }
-        }
-
-        let order_withdrawn = Orderbook::OrderWithdrawn::decode_log(&log.inner, false);
-        match order_withdrawn {
-            Ok(log) => {
-                // Process the log if decoding was successful
-                info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", log));
-                continue;
-            }
-            Err(e) => {
-                // Handle the error if decoding failed
-                debug!(context.logger, "Failed to decode log"; "error" => format!("{:?}", e));
-            }
-        }
-
-        warn!(context.logger, "Unable to decode log"; "log" => format!("{:?}", log));
+        process_log(context, log).await?;
     }
 
-    info!(context.logger, "Polling routine terminated!");
     Ok(())
 }
