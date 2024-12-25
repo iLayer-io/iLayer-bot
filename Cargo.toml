@@ -10,7 +10,7 @@ name = "bot"
 path = "src/main.rs"
 
 [dependencies]
-diesel = { version = "2.2.0", features = ["postgres"] }
+diesel = { version = "2.2.0", features = ["postgres","chrono"] }
 alloy = { version = "0.8.3", features = ["full"] }
 config = "0.14.1"
 dotenv = "0.15.0"
@@ -21,3 +21,4 @@ slog = "2.7.0"
 slog-async = "2.8.0"
 slog-term = "2.9.1"
 tokio = {version = "1.42.0", features = ["full"]}
+chrono = "0.4.39"

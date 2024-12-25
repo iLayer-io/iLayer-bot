@@ -1,4 +1,5 @@
 use config::{Config, ConfigError};
+use diesel::{Connection, PgConnection};
 use serde::Deserialize;
 use slog::{o, Drain};
 use eyre::Result;
@@ -8,10 +9,12 @@ pub struct AppConfig {
   pub rpc_url: String,
   pub ws_url: String,
   pub order_contract_address: String,
+  pub database_url: String,
   pub from_block: Option<u64>,
 }
 
 pub struct AppContext {
+  pub connection: PgConnection,
   pub config: AppConfig,
   pub logger: slog::Logger,
 }
@@ -29,9 +32,14 @@ pub fn config() -> Result<AppConfig, ConfigError>{
 pub fn context() -> Result<AppContext>{
   let decorator = slog_term::TermDecorator::new().build();
   let drain = std::sync::Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
+  let config = config()?;
+
+  let connection = PgConnection::establish(&config.database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {}", config.database_url));
 
   return Ok(AppContext{
-    config: config()?,
+    connection: connection,
+    config: config,
     logger: slog::Logger::root(drain, o!())
   });
 }

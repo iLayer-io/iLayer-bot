@@ -7,6 +7,8 @@ use std::sync::Arc;
 mod context;
 mod worker;
 mod solidity;
+mod schema;
+mod models;
 
 #[tokio::main]
 async fn main() -> Result<()> {
