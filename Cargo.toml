@@ -10,6 +10,7 @@ name = "bot"
 path = "src/main.rs"
 
 [dependencies]
+diesel = { version = "2.2.0", features = ["postgres"] }
 alloy = { version = "0.8.3", features = ["full"] }
 config = "0.14.1"
 dotenv = "0.15.0"

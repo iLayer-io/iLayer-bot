@@ -12,10 +12,14 @@ use slog::{debug, info, warn};
 use crate::context::AppContext;
 use crate::solidity::{OrderCreated, Orderbook};
 
+mod process;
+
+
 pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
     let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
     if order_created.is_ok() {
         info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_created.unwrap()));
+        process::process_order_created_log(context, log).await?;
         return Ok(());
     }
 
