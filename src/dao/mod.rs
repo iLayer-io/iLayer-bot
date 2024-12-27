@@ -1,10 +1,10 @@
 use diesel::{ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl};
-use eyre::{Result};
+use eyre::Result;
 use crate::orm::schema::orders;
 use crate::orm::models::Order;
 
 pub trait OrderDao {
-    fn getOrder(&mut self, order_id: Vec<u8>) -> Result<Order>;
+    fn get_order(&mut self, order_id: Vec<u8>) -> Result<Order>;
 }
 
 pub struct UserImpl {
@@ -12,7 +12,7 @@ pub struct UserImpl {
 }
 
 impl OrderDao for UserImpl {
-    fn getOrder(&mut self, order_id: Vec<u8>) -> Result<Order> {
+    fn get_order(&mut self, order_id: Vec<u8>) -> Result<Order> {
         return orders::dsl::orders
         .filter(orders::dsl::order_id.eq(order_id))
         .first::<Order>(&mut self.conn).map_err(|e| e.into());
@@ -23,9 +23,7 @@ impl OrderDao for UserImpl {
  
 #[cfg(test)]
 mod tests {
-    use crate::context::{self, AppConfig, AppContext};
-    use alloy::primitives::{Log as PrimitivesLog, LogData};
-    use alloy::rpc::types::Log;
+    use crate::context::{AppConfig, AppContext};
     use diesel::{Connection, PgConnection};
     use slog::{o, Drain};
 

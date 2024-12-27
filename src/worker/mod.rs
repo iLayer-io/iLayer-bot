@@ -18,7 +18,7 @@ mod process;
 
 pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
     let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
-    let mut connection = PgConnection::establish(&context.config.database_url)?;
+    let connection = PgConnection::establish(&context.config.database_url)?;
 
     if order_created.is_ok() {
         let order_created = order_created.unwrap();

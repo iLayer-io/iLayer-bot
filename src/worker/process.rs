@@ -12,9 +12,9 @@ pub async fn process_order_withdrawn_log(
     connection: PgConnection,
     log: Log<OrderWithdrawn>,
 ) -> Result<()> {
-    let mut userImpl = dao::UserImpl { conn: connection };
+    let mut user_impl = dao::UserImpl { conn: connection };
 
-    let _result = userImpl.getOrder(log.data.orderId.to_vec());
+    let _result = user_impl.get_order(log.data.orderId.to_vec());
     return Ok(());
 }
 
