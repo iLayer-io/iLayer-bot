@@ -9,6 +9,7 @@ CREATE TABLE processed_block (
 
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
+    order_id BYTEA NOT NULL UNIQUE,
     "user" BYTEA NOT NULL,
     filler BYTEA,
     source_chain_selector BIGINT NOT NULL,

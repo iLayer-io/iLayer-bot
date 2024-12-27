@@ -3,6 +3,7 @@
 diesel::table! {
     orders (id) {
         id -> Int4,
+        order_id -> Bytea,
         user -> Bytea,
         filler -> Nullable<Bytea>,
         source_chain_selector -> Int8,

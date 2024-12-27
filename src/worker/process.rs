@@ -1,21 +1,35 @@
-use crate::{context::AppContext, models::Order, schema::orders::dsl::*};
-use alloy::rpc::types::Log;
-use diesel::{QueryDsl, RunQueryDsl, SelectableHelper};
+use crate::{
+    context::AppContext,
+    dao::{self, OrderDao},
+    solidity::Orderbook::{OrderCreated, OrderFilled, OrderWithdrawn},
+};
+use alloy::primitives::Log;
+use diesel::PgConnection;
 use eyre::{Ok, Result};
 
-pub async fn process_order_withdrawn_log(context: &mut AppContext, log: Log) -> Result<()> {
-    let results = orders
-        .limit(5)
-        .select(Order::as_select())
-        .load(&mut context.connection)
-        .expect("Error loading posts");
+pub async fn process_order_withdrawn_log(
+    _context: &AppContext,
+    connection: PgConnection,
+    log: Log<OrderWithdrawn>,
+) -> Result<()> {
+    let mut userImpl = dao::UserImpl { conn: connection };
+
+    let _result = userImpl.getOrder(log.data.orderId.to_vec());
+    return Ok(());
+}
+
+pub async fn process_order_filled_log(
+    _context: &AppContext,
+    _connection: PgConnection,
+    _log: Log<OrderFilled>,
+) -> Result<()> {
     Ok(())
 }
 
-pub async fn process_order_filled_log(context: &AppContext, log: Log) -> Result<()> {
-    Ok(())
-}
-
-pub async fn process_order_created_log(context: &AppContext, log: Log) -> Result<()> {
+pub async fn process_order_created_log(
+    _context: &AppContext,
+    _connection: PgConnection,
+    _log: Log<OrderCreated>,
+) -> Result<()> {
     Ok(())
 }

@@ -7,8 +7,8 @@ use std::sync::Arc;
 mod context;
 mod worker;
 mod solidity;
-mod schema;
-mod models;
+mod orm;
+mod dao;
 
 #[tokio::main]
 async fn main() -> Result<()> {

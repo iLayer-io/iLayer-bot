@@ -1,37 +1,45 @@
 use alloy::rpc::types::Log;
-use alloy::sol_types::{SolError, SolEvent};
+use alloy::sol_types::SolEvent;
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder},
     rpc::types::Filter,
 };
+use diesel::{Connection, PgConnection};
 use eyre::{Ok, Result};
 use futures_util::StreamExt;
-use slog::{debug, info, warn};
+use slog::{info, warn};
 
 use crate::context::AppContext;
-use crate::solidity::{OrderCreated, Orderbook};
+use crate::solidity::Orderbook;
 
 mod process;
 
 
 pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
     let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
+    let mut connection = PgConnection::establish(&context.config.database_url)?;
+
     if order_created.is_ok() {
-        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_created.unwrap()));
-        process::process_order_created_log(context, log).await?;
+        let order_created = order_created.unwrap();
+        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_created));
+        process::process_order_created_log(context, connection, order_created).await?;
         return Ok(());
     }
 
     let order_filled = Orderbook::OrderFilled::decode_log(&log.inner, false);
     if order_filled.is_ok() {
-        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_filled.unwrap()));
+        let order_filled = order_filled.unwrap();        
+        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_filled));
+        process::process_order_filled_log(context, connection, order_filled).await?;
         return Ok(());
     }
 
     let order_withdrawn = Orderbook::OrderWithdrawn::decode_log(&log.inner, false);
     if order_withdrawn.is_ok() {
-        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_withdrawn.unwrap()));
+        let order_withdrawn = order_withdrawn.unwrap();
+        info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_withdrawn));
+        process::process_order_withdrawn_log(context, connection, order_withdrawn).await?;
         return Ok(());
     }
 

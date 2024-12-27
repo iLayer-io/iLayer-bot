@@ -1,10 +1,11 @@
 use diesel::prelude::*;
 
 #[derive(Queryable, Insertable, AsChangeset, Selectable, Debug)]
-#[diesel(table_name = crate::schema::orders)]
+#[diesel(table_name = crate::orm::schema::orders)]
 pub struct Order {
     pub id: i32,
     pub user: Vec<u8>,
+    pub order_id: Vec<u8>,
     pub filler: Option<Vec<u8>>,
     pub source_chain_selector: i64,
     pub destination_chain_selector: i64,
@@ -16,7 +17,7 @@ pub struct Order {
 }
 
 #[derive(Queryable, Insertable, AsChangeset, Debug)]
-#[diesel(table_name = crate::schema::tokens)]
+#[diesel(table_name = crate::orm::schema::tokens)]
 pub struct Token {
     pub id: i32,
     pub order_id: i32,
@@ -26,7 +27,7 @@ pub struct Token {
 }
 
 #[derive(Queryable, Insertable, AsChangeset, Debug)]
-#[diesel(table_name = crate::schema::processed_block)]
+#[diesel(table_name = crate::orm::schema::processed_block)]
 pub struct ProcessedBlock {
     pub id: i32,
     pub height: i32,
