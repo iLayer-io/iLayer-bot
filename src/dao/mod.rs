@@ -1,10 +1,11 @@
-use diesel::{ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl, SelectableHelper};
 use eyre::Result;
 use crate::orm::schema::orders;
-use crate::orm::models::Order;
+use crate::orm::models::{NewOrder, Order};
 
 pub trait OrderDao {
     fn get_order(&mut self, order_id: Vec<u8>) -> Result<Order>;
+    fn create_order(&mut self, order: NewOrder) -> Result<i32>;
 }
 
 pub struct UserImpl {
@@ -13,9 +14,22 @@ pub struct UserImpl {
 
 impl OrderDao for UserImpl {
     fn get_order(&mut self, order_id: Vec<u8>) -> Result<Order> {
-        return orders::dsl::orders
+        let result = orders::dsl::orders
         .filter(orders::dsl::order_id.eq(order_id))
+        .select(Order::as_select())
         .first::<Order>(&mut self.conn).map_err(|e| e.into());
+    
+        return result;
+    }
+
+    fn create_order(&mut self, order: NewOrder) -> Result<i32> {
+        let result = diesel::insert_into(orders::table)
+            .values(&order)
+            .returning(orders::dsl::id) 
+            .get_result::<i32>(&mut self.conn)
+            .map_err(|e| e.into());
+
+        return result;
     }
  }
 

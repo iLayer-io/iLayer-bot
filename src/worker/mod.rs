@@ -18,6 +18,7 @@ mod process;
 
 pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
     let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
+    // TODO FIXME: Use R2D2 to manage connection pool, and avoid creating a new connection for each log
     let connection = PgConnection::establish(&context.config.database_url)?;
 
     if order_created.is_ok() {
@@ -48,6 +49,9 @@ pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
 }
 
 pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Result<()> {
+    // TODO FIXME: Refactor to subscribe to blocks and save processed blocks into DB
+    //   or use a more efficient way to process logs, 
+    //   but we need to keep track of the last processed ones and avoid duplicates/out of order processing
     let url = &context.config.ws_url;
     let address: Address = context.config.order_contract_address.parse()?;
     let from_block = context.config.from_block.unwrap_or(0);
@@ -78,6 +82,7 @@ pub async fn run_ordercreated_subscription_worker(context: &AppContext) -> Resul
 }
 
 pub async fn run_ordercreated_poll_worker(context: &AppContext) -> Result<()> {
+    // TODO FIXME: Save processed blocks into DB
     let url = &context.config.rpc_url;
     let address: Address = context.config.order_contract_address.parse()?;
     let from_block = context.config.from_block.unwrap_or(0);

@@ -5,14 +5,14 @@ diesel::table! {
         id -> Int4,
         order_id -> Bytea,
         user -> Bytea,
-        filler -> Nullable<Bytea>,
-        source_chain_selector -> Int8,
-        destination_chain_selector -> Int8,
+        filler -> Bytea,
+        source_chain_selector -> Bytea,
+        destination_chain_selector -> Bytea,
         sponsored -> Bool,
-        primary_filler_deadline -> Timestamp,
-        deadline -> Timestamp,
-        call_recipient -> Nullable<Bytea>,
-        call_data -> Nullable<Bytea>,
+        primary_filler_deadline -> Timestamptz,
+        deadline -> Timestamptz,
+        call_recipient -> Bytea,
+        call_data -> Bytea,
     }
 }
 

@@ -16,6 +16,17 @@ async fn main() -> Result<()> {
 
     let app_context = Arc::new(context::context()?);
     info!(app_context.logger,"Main function is starting...");
+    // TODO FIXME: We should implement the following workflow:
+    // 1. Poll from block_height all the blocks:
+    //    - Get all the logs from the block, and process them saving orders to DB
+    //    - Save the block as processed in the database
+    // 2. Start this two workers:
+    //    2a. Subscribe to new blocks:
+    //      - Get all the logs from the block, and process them saving orders to DB
+    //      - Save the block as processed in the database
+    //    2b. Subscribe to new orders (scheduled jobs?):
+    //      - Check for orders that are not expired, after primary filler deadline, and try to fill them
+
 
     let worker_handle = {
         let config = Arc::clone(&app_context);

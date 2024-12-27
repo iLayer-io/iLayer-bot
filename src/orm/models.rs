@@ -1,20 +1,39 @@
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Queryable, Insertable, AsChangeset, Selectable, Debug)]
+#[derive(Default,Selectable,Debug,Queryable,Identifiable,Insertable,Serialize,Deserialize)]
 #[diesel(table_name = crate::orm::schema::orders)]
+#[diesel(primary_key(id))]
 pub struct Order {
     pub id: i32,
     pub user: Vec<u8>,
     pub order_id: Vec<u8>,
-    pub filler: Option<Vec<u8>>,
-    pub source_chain_selector: i64,
-    pub destination_chain_selector: i64,
+    pub filler: Vec<u8>,
+    pub source_chain_selector: Vec<u8>,
+    pub destination_chain_selector: Vec<u8>,
     pub sponsored: bool,
-    pub primary_filler_deadline: chrono::NaiveDateTime,
-    pub deadline: chrono::NaiveDateTime,
-    pub call_recipient: Option<Vec<u8>>,
-    pub call_data: Option<Vec<u8>>,
+    pub primary_filler_deadline: chrono::DateTime<chrono::Utc>,
+    pub deadline: chrono::DateTime<chrono::Utc>,
+    pub call_recipient: Vec<u8>,
+    pub call_data: Vec<u8>,
 }
+
+
+#[derive(Debug,Insertable)]
+#[diesel(table_name = crate::orm::schema::orders)]
+pub struct NewOrder {
+    pub user: Vec<u8>,
+    pub order_id: Vec<u8>,
+    pub filler: Vec<u8>,
+    pub source_chain_selector: Vec<u8>,
+    pub destination_chain_selector: Vec<u8>,
+    pub sponsored: bool,
+    pub primary_filler_deadline: chrono::DateTime<chrono::Utc>,
+    pub deadline: chrono::DateTime<chrono::Utc>,
+    pub call_recipient: Vec<u8>,
+    pub call_data: Vec<u8>,
+}
+
 
 #[derive(Queryable, Insertable, AsChangeset, Debug)]
 #[diesel(table_name = crate::orm::schema::tokens)]

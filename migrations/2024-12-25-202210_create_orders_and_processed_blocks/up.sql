@@ -11,14 +11,14 @@ CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     order_id BYTEA NOT NULL UNIQUE,
     "user" BYTEA NOT NULL,
-    filler BYTEA,
-    source_chain_selector BIGINT NOT NULL,
-    destination_chain_selector BIGINT NOT NULL,
+    filler BYTEA NOT NULL,
+    source_chain_selector BYTEA NOT NULL,
+    destination_chain_selector BYTEA NOT NULL,
     sponsored BOOLEAN NOT NULL,
-    primary_filler_deadline TIMESTAMP NOT NULL,
-    deadline TIMESTAMP NOT NULL,
-    call_recipient BYTEA,
-    call_data BYTEA
+    primary_filler_deadline TIMESTAMPTZ NOT NULL,
+    deadline TIMESTAMPTZ NOT NULL,
+    call_recipient BYTEA NOT NULL,
+    call_data BYTEA NOT NULL
 );
 
 -- Create tokens table
