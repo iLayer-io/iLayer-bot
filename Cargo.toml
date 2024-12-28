@@ -10,15 +10,17 @@ name = "bot"
 path = "src/main.rs"
 
 [dependencies]
-diesel = { version = "2.2.0", features = ["postgres","chrono"] }
 alloy = { version = "0.8.3", features = ["full"] }
-config = "0.14.1"
+config = "0.15.4"
 dotenv = "0.15.0"
 eyre = "0.6.12"
 futures-util = "0.3.31"
-serde = { version = "1.0.209", features = ["derive"] } 
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.134"
 slog = "2.7.0"
 slog-async = "2.8.0"
 slog-term = "2.9.1"
-tokio = {version = "1.42.0", features = ["full"]}
+tokio = { version = "1.42.0", features = ["full"] }
 chrono = { version = "0.4.39", features = ["serde"] }
+redis = { version = "0.27.6", features = ["r2d2"] }
+hex = "0.4.3"

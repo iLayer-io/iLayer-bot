@@ -12,8 +12,8 @@ ILayer Bot is a Rust application designed to fulfill ILayer orders efficiently.
 2. Install dependencies:
     ```sh
     cargo build
-    ```
-    
+    ```    
+
 ## Usage
 
 ```sh

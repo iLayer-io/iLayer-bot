@@ -8,7 +8,7 @@ pub struct AppConfig {
   pub rpc_url: String,
   pub ws_url: String,
   pub order_contract_address: String,
-  pub database_url: String,
+  pub redis_url: String,
   pub from_block: Option<u64>,
 }
 

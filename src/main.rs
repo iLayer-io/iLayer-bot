@@ -27,6 +27,12 @@ async fn main() -> Result<()> {
     //    2b. Subscribe to new orders (scheduled jobs?):
     //      - Check for orders that are not expired, after primary filler deadline, and try to fill them
 
+    let poll_worker_handle = {
+        let config: Arc<context::AppContext> = Arc::clone(&app_context);
+        tokio::spawn(async move {
+            worker::run_ordercreated_poll_worker(&config).await
+        })
+    }; 
 
     let worker_handle = {
         let config = Arc::clone(&app_context);
@@ -34,14 +40,7 @@ async fn main() -> Result<()> {
             worker::run_ordercreated_subscription_worker(&config).await
         })
     };
-
-    let poll_worker_handle = {
-        let config = Arc::clone(&app_context);
-        tokio::spawn(async move {
-            worker::run_ordercreated_poll_worker(&config).await
-        })
-    }; 
-
+    
     let (worker_result, poll_worker_result) = tokio::join!(worker_handle, poll_worker_handle);
 
     handle_result(&app_context.logger,"Subscription worker", worker_result);

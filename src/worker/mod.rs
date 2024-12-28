@@ -5,7 +5,6 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     rpc::types::Filter,
 };
-use diesel::{Connection, PgConnection};
 use eyre::{Ok, Result};
 use futures_util::StreamExt;
 use slog::{info, warn};
@@ -18,13 +17,15 @@ mod process;
 
 pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
     let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
-    // TODO FIXME: Use R2D2 to manage connection pool, and avoid creating a new connection for each log
-    let connection = PgConnection::establish(&context.config.database_url)?;
+    // TODO: Use R2D2 to manage connection pool, and avoid creating a new connection for each log
+    let client = redis::Client::open(context.config.redis_url.clone())?;   
+    let connection = client.get_connection()?;
 
     if order_created.is_ok() {
         let order_created = order_created.unwrap();
         info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_created));
-        process::process_order_created_log(context, connection, order_created).await?;
+        process::process_order_created_log(context, connection, order_created.clone()).await?;
+        info!(context.logger, "Successfully processed log"; "log" => format!("{:?}", order_created));
         return Ok(());
     }
 
@@ -32,7 +33,8 @@ pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
     if order_filled.is_ok() {
         let order_filled = order_filled.unwrap();        
         info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_filled));
-        process::process_order_filled_log(context, connection, order_filled).await?;
+        process::process_order_filled_log(context, connection, order_filled.clone()).await?;
+        info!(context.logger, "Successfully processed log"; "log" => format!("{:?}", order_filled));
         return Ok(());
     }
 
@@ -40,7 +42,8 @@ pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
     if order_withdrawn.is_ok() {
         let order_withdrawn = order_withdrawn.unwrap();
         info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_withdrawn));
-        process::process_order_withdrawn_log(context, connection, order_withdrawn).await?;
+        process::process_order_withdrawn_log(context, connection, order_withdrawn.clone()).await?;
+        info!(context.logger, "Successfully processed log"; "log" => format!("{:?}", order_withdrawn));
         return Ok(());
     }
 

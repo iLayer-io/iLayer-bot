@@ -4,13 +4,6 @@ use eyre::Result;
 
 use crate::orm::models;
 
-sol!(
-    #[allow(missing_docs)]
-    #[sol(rpc)]
-    Counter,
-    "abi/Counter.json"
-);
-
 // TODO Wait for the fix to be tagged, then remove this.
 sol!(
     #[allow(missing_docs)]
@@ -31,7 +24,7 @@ sol!(
 pub fn map_solidity_order_to_model(
     order_id: Vec<u8>,
     order: &Validator::Order,
-) -> Result<models::NewOrder> {
+) -> Result<models::Order> {
     // TODO FIXME: Improve error handling
     let mut user = order.user.lower.to_vec();
     user.extend(order.user.upper.iter());
@@ -44,34 +37,17 @@ pub fn map_solidity_order_to_model(
 
     let call_data = order.callData.to_vec();
 
-    let primary_filler_deadline_vec = order.primaryFillerDeadline.as_le_bytes().to_vec();
-    if primary_filler_deadline_vec.len() != 8 {
-        return Err(eyre::eyre!(
-            "Invalid primary deadline length, it must be 8 bytes to be a valid Unix timestamp"
-        ));
-    }
-    let primary_filler_deadline_u64 =
-        u64::from_le_bytes(primary_filler_deadline_vec.try_into().unwrap());
-    let primary_filler_deadline = DateTime::from_timestamp(primary_filler_deadline_u64 as i64, 0);
 
-    let deadline_vec = order.deadline.as_le_bytes().to_vec();
-    if deadline_vec.len() != 8 {
-        return Err(eyre::eyre!(
-            "Invalid primary deadline length, it must be 8 bytes to be a valid Unix timestamp"
-        ));
-    }
-    let deadline_u64 = u64::from_le_bytes(deadline_vec.try_into().unwrap());
-    let deadline = DateTime::from_timestamp(deadline_u64 as i64, 0);
-
-    Ok(models::NewOrder {
+    Ok(models::Order {
         user: user,
-        order_id: order_id,
+        id: order_id,
         filler: filler,
         source_chain_selector: order.sourceChainSelector.as_le_bytes().to_vec(),
         destination_chain_selector: order.destinationChainSelector.as_le_bytes().to_vec(),
         sponsored: false,
-        primary_filler_deadline: primary_filler_deadline.expect("Unable to deserialize DateTime"),
-        deadline: deadline.expect("Unable to deserialize DateTime"),
+        // TODO Map deadlines to DateTime
+        primary_filler_deadline: DateTime::default(),
+        deadline: DateTime::default(),
         call_recipient: call_recipient,
         call_data: call_data,
     })
