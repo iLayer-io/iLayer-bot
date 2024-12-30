@@ -7,7 +7,6 @@ use std::sync::Arc;
 mod context;
 mod worker;
 mod solidity;
-mod orm;
 mod dao;
 
 #[tokio::main]

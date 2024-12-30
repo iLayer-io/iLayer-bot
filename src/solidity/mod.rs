@@ -1,8 +1,7 @@
 use alloy::sol;
-use chrono::{DateTime, TimeZone};
 use eyre::Result;
 
-use crate::orm::models;
+use crate::dao::models;
 
 // TODO Wait for the fix to be tagged, then remove this.
 sol!(
@@ -154,7 +153,7 @@ mod tests {
         let address = Address::from_str("0x8ce361602b935680e8dec218b820ff5056beb7af").unwrap();
         let log = Log::new(address, topics, data).unwrap();
         let order_created = Orderbook::OrderCreated::decode_log(&log, false).unwrap();
-        let actual: crate::orm::models::Order = map_solidity_order_to_model(
+        let actual: crate::dao::models::Order = map_solidity_order_to_model(
             "0x777a108f0d7d6ef99218eb59bc1900ed56d401db4fc9bbff76d85c68c5cb0168"
                 .as_bytes()
                 .to_vec(),
@@ -174,7 +173,7 @@ mod tests {
         let call_data = vec![];
 
 
-        let expected = crate::orm::models::Order{
+        let expected = crate::dao::models::Order{
             user: user,
             id: id,
             filler: filler,

@@ -42,7 +42,7 @@ pub async fn process_order_created_log(
     let new_order = map_solidity_order_to_model(log.orderId.to_vec(), &log.order)?;
 
     info!(context.logger, "creating order..."; "log" => format!("{:?}", log));
-    let _result = user_impl.create_order(new_order).await?;
+    let _result = user_impl.create_order(&new_order).await?;
     info!(context.logger, "Processed log!"; "log" => format!("{:?}", log));
     
     Ok(())

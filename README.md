@@ -23,6 +23,19 @@ diesel setup # setup db and run migrations
 cargo run # start the bot
 ```
 
+## Testing
+
+To run unit tests, use the following command:
+```sh
+cargo test
+```
+
+To run end-to-end (e2e) tests, use the following command:
+```sh
+cargo test -- --ignored
+```
+Note that e2e tests have a dependency on `docker-compose` and `anvil` to start the necessary services.
+
 ## Migrations
 
 ```sh
