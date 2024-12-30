@@ -14,6 +14,6 @@ pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
 }
 
 
-pub async fn filter_orders<'a>(context: &AppContext, orders: &'a [Order]) -> Result<&'a [Order]> {
-    Ok(orders)
+pub async fn filter_orders(context: &AppContext, orders: &[Order]) -> Result<Vec<Order>> {
+    Ok(orders.to_vec())
 }
