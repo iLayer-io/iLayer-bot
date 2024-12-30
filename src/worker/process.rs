@@ -1,5 +1,5 @@
 use crate::{
-    context::{context, AppContext},
+    context::AppContext,
     dao::{self, redis::OrderDao},
     solidity::{map_solidity_order_to_model, Orderbook::{OrderCreated, OrderFilled, OrderWithdrawn}},
 };

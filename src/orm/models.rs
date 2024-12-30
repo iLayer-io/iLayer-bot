@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Default,Debug, Serialize,Deserialize)]
+#[derive(Default,Debug, Serialize,Deserialize, PartialEq, Eq)]
 pub struct Order {
     pub user: Vec<u8>,
     pub id: Vec<u8>,

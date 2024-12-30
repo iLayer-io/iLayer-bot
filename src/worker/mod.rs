@@ -16,11 +16,13 @@ mod process;
 
 
 pub async fn process_log(context: &AppContext, log: Log) -> Result<()> {
-    let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
+    info!(context.logger, "Processing Event Log"; "log" => format!("{:?}", log.data()));
+
     // TODO: Use R2D2 to manage connection pool, and avoid creating a new connection for each log
     let client = redis::Client::open(context.config.redis_url.clone())?;   
     let connection = client.get_connection()?;
 
+    let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
     if order_created.is_ok() {
         let order_created = order_created.unwrap();
         info!(context.logger, "Successfully decoded log"; "log" => format!("{:?}", order_created));
