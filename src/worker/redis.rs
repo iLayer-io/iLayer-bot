@@ -1,6 +1,6 @@
 use eyre::Result;
 
-use crate::context::AppContext;
+use crate::{context::AppContext, dao::models::Order};
 
 pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
     loop {
@@ -11,4 +11,9 @@ pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
         //   - call fillOrder on the target smart contract's router
         // 3. If successful, mark as done the Redis order
     }
+}
+
+
+pub async fn filter_orders<'a>(context: &AppContext, orders: &'a [Order]) -> Result<&'a [Order]> {
+    Ok(orders)
 }
