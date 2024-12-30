@@ -84,6 +84,7 @@ mod tests {
         let decorator = slog_term::TermDecorator::new().build();
         let drain = std::sync::Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
 
+        // TODO Take config from (test?) env vars
         let context = &AppContext {
             config: AppConfig {
                 redis_url: "redis://localhost:6379".to_string(),
