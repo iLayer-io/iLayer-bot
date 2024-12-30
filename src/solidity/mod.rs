@@ -36,11 +36,11 @@ pub fn map_solidity_order_to_model(
 
     let call_data = order.callData.to_vec();
 
-        let primary_filler_deadline = chrono::DateTime::from_timestamp(order.primaryFillerDeadline.to(), 0)
+    let primary_filler_deadline =
+        chrono::DateTime::from_timestamp(order.primaryFillerDeadline.to(), 0)
             .ok_or_else(|| eyre::eyre!("Invalid primaryFillerDeadline timestamp"))?;
     let deadline = chrono::DateTime::from_timestamp(order.deadline.to(), 0)
-            .ok_or_else(|| eyre::eyre!("Invalid deadline timestamp"))?;
-
+        .ok_or_else(|| eyre::eyre!("Invalid deadline timestamp"))?;
 
     Ok(models::Order {
         user: user,
@@ -99,12 +99,10 @@ impl std::fmt::Debug for Orderbook::OrderFilled {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use alloy::{
-        primitives::{Address, Bytes, FixedBytes, Log},
-        sol_types::SolEvent,
+        primitives::{Address, Bytes, FixedBytes, Log}, signers::local::PrivateKeySigner, sol_types::SolEvent
     };
+    use std::str::FromStr;
 
     use super::{map_solidity_order_to_model, Orderbook};
 
@@ -147,8 +145,9 @@ mod tests {
             000000000000000000000000000000000000000000000000000000000000000ffff\
             ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000\
             000000000000000000000000000000000000000000de0b6b3a76400000000000000\
-            000000000000000000000000000000000000000000000000000000"
-        ).unwrap();
+            000000000000000000000000000000000000000000000000000000",
+        )
+        .unwrap();
 
         let address = Address::from_str("0x8ce361602b935680e8dec218b820ff5056beb7af").unwrap();
         let log = Log::new(address, topics, data).unwrap();
@@ -161,19 +160,38 @@ mod tests {
         )
         .unwrap();
 
-        let id = "0x777a108f0d7d6ef99218eb59bc1900ed56d401db4fc9bbff76d85c68c5cb0168".as_bytes().to_vec();
-        let user= vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 238, 122, 20, 45, 38, 124, 31, 54, 113, 78, 74, 143, 117, 97, 47, 32, 167, 151, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let filler = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 97, 142, 129, 227, 245, 205, 247, 245, 76, 61, 101, 247, 251, 192, 171, 245, 178, 30, 143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let destination_chain_selector = vec![105, 122, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let source_chain_selector = vec![105, 122, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let id = "0x777a108f0d7d6ef99218eb59bc1900ed56d401db4fc9bbff76d85c68c5cb0168"
+            .as_bytes()
+            .to_vec();
+        let user = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 238, 122, 20, 45, 38, 124, 31, 54, 113, 78,
+            74, 143, 117, 97, 47, 32, 167, 151, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let filler = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 97, 142, 129, 227, 245, 205, 247, 245, 76, 61,
+            101, 247, 251, 192, 171, 245, 178, 30, 143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let destination_chain_selector = vec![
+            105, 122, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
+        let source_chain_selector = vec![
+            105, 122, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
         let sponsored = false;
-        let primary_filler_deadline = chrono::DateTime::from_timestamp(1735566882,0).unwrap();
-        let deadline = chrono::DateTime::from_timestamp(1755556882,0).unwrap();
-        let call_recipient = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let primary_filler_deadline = chrono::DateTime::from_timestamp(1735566882, 0).unwrap();
+        let deadline = chrono::DateTime::from_timestamp(1755556882, 0).unwrap();
+        let call_recipient = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0,
+        ];
         let call_data = vec![];
 
-
-        let expected = crate::dao::models::Order{
+        let expected = crate::dao::models::Order {
             user: user,
             id: id,
             filler: filler,
@@ -185,9 +203,37 @@ mod tests {
             call_recipient: call_recipient,
             call_data: call_data,
         };
-        assert_eq!(
-            actual,
-            expected 
-        );
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_priv_key_to_address_conversion() {
+        // This is a placeholder for the actual test implementation.
+        // You would need to implement the logic to convert a private key to an address
+        // and then verify the conversion is correct.
+        let priv_key = "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6";
+        let expected_address_str = "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720";
+
+        // Implement the conversion logic here
+        let signer = PrivateKeySigner::from_str(priv_key).unwrap();
+        let actual_address_str = signer.address().to_string();
+
+        assert_eq!(actual_address_str, expected_address_str);
+    }
+
+    #[test]
+    fn test_address_from_vec8() {
+        let filler = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 97, 142, 129, 227, 245, 205, 247, 245, 76, 61,
+            101, 247, 251, 192, 171, 245, 178, 30, 143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let expected_address = Address::from_slice(&filler[12..32]);
+
+        let priv_key = "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97";
+        let signer = PrivateKeySigner::from_str(priv_key).unwrap();
+        let actual_address = signer.address();
+
+        assert_eq!(actual_address, expected_address);
     }
 }
