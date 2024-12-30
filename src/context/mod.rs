@@ -3,14 +3,16 @@ use serde::Deserialize;
 use slog::{o, Drain};
 use eyre::Result;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct AppConfig {
   pub rpc_url: String,
   pub ws_url: String,
   pub order_contract_address: String,
   pub redis_url: String,
   pub from_block: Option<u64>,
+  pub redis_poll_interval: u64,
 }
+
 
 pub struct AppContext {
   pub config: AppConfig,
