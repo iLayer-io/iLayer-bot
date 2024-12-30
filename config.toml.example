@@ -1,0 +1,128 @@
+
+export const config: Config = {
+  defaultNetwork: 'testnet',
+  chains: [
+    {
+      name: 'Primary Testnet',
+      rpc: 'https://api.testnet.hiro.so',
+      indexer: 'https://indexer-staging.granite.world',
+      notificationBot: 'https://notification-bot-staging.granite.world',
+      websockets: 'wss://indexer-staging.granite.world/ws',
+      network: 'testnet',
+      blocktime: 600,
+    },
+    {
+      name: 'Painfully-slow Mainnet',
+      rpc: 'https://leather.granite.world',
+      indexer: 'https://indexer.granite.world',
+      notificationBot: '',
+      websockets: 'wss://indexer.granite.world/ws',
+      network: 'mainnet',
+      blocktime: 600,
+    },
+  ],
+  markets: [
+    {
+      network: 'testnet',
+      market_asset: {
+        display_name: 'USDC',
+        contract: {
+          id: 'mock-usdc',
+          name: 'mock-usdc',
+          principal: 'ST2F8X0J7SXFPX7KEVH35M5QCNVV13W9TEK8MFGCS',
+        },
+        decimals: 8,
+        display_decimals: 2,
+        image:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+        price_feed:
+          'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a',
+        asset_cap: 1000000000000,
+        dust_threshold: 0.01
+      },
+      share_token: {
+        display_name: 'gUSDC',
+        contract: {
+          id: 'state',
+          name: 'state',
+          principal: 'ST2QQBQP2GGEMWQHK9A6VBCV2R4ZKGEN6T7DCJH6G',
+        },
+        decimals: 8,
+        display_decimals: 2,
+        image:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd/logo.png',
+      },
+      collaterals: [
+        {
+          display_name: 'BTC',
+          maxLTV: 0.7,
+          liquidationLTV: 0.8,
+          liquidationPremium: 0.1,
+          contract: {
+            id: 'mock-btc',
+            name: 'mock-btc',
+            principal: 'ST2F8X0J7SXFPX7KEVH35M5QCNVV13W9TEK8MFGCS',
+          },
+          decimals: 8,
+          display_decimals: 5,
+          image:
+            'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png',
+          price_feed:
+            'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
+        },
+        {
+          display_name: 'ETH',
+          maxLTV: 0.5,
+          liquidationLTV: 0.5,
+          liquidationPremium: 0.1,
+          contract: {
+            id: 'mock-eth',
+            name: 'mock-eth',
+            principal: 'ST2F8X0J7SXFPX7KEVH35M5QCNVV13W9TEK8MFGCS',
+          },
+          decimals: 8,
+          display_decimals: 3,
+          image:
+            'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
+          price_feed:
+            'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
+        },
+      ],
+      contracts: {
+        PYTH: {
+          name: 'pyth-governance-v2',
+          principal: 'ST2QQBQP2GGEMWQHK9A6VBCV2R4ZKGEN6T7DCJH6G',
+        },
+        STATE: {
+          id: 'lp-token',
+          name: 'state-v1',
+          principal: 'ST2QQBQP2GGEMWQHK9A6VBCV2R4ZKGEN6T7DCJH6G',
+        },
+        LP: {
+          name: 'liquidity-provider-v1',
+          principal: 'ST2QQBQP2GGEMWQHK9A6VBCV2R4ZKGEN6T7DCJH6G',
+        },
+        BORROWER: {
+          name: 'borrower-v1',
+          principal: 'ST2QQBQP2GGEMWQHK9A6VBCV2R4ZKGEN6T7DCJH6G',
+        },
+        LIQUIDATOR: {
+          name: 'liquidator-v1',
+          principal: 'ST2QQBQP2GGEMWQHK9A6VBCV2R4ZKGEN6T7DCJH6G',
+        },
+        INTEREST_RATE: {
+          name: 'linear-kinked-ir-v1',
+          principal: 'ST2QQBQP2GGEMWQHK9A6VBCV2R4ZKGEN6T7DCJH6G',
+        },
+      },
+      ir_params: {
+        baseIR: 3,
+        slope1: 0.13,
+        slope2: 2,
+        urKink: 0.7,
+      },
+      protocol_reserve_percentage: 0,
+      scaling_factor: 1000000000000,
+    },
+  ],
+} as const;
