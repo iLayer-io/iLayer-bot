@@ -12,17 +12,17 @@ pub trait OrderDao<'a> {
     async fn delete_order(&mut self, order_id: Vec<u8>) -> Result<()>;
 }
 
-pub struct UserImpl<'a> {
+pub struct OrderImpl<'a> {
     pub connection: Connection,
     pub context: &'a AppContext,
 }
 
-impl<'a> OrderDao<'a> for UserImpl<'a> {
+impl<'a> OrderDao<'a> for OrderImpl<'a> {
     fn new(context: &'a AppContext) -> Self {
         let client = redis::Client::open(context.config.redis_url.clone()).unwrap();
         let connection = client.get_connection().unwrap();
         // TODO Add logger or context?
-        UserImpl { connection, context }
+        OrderImpl { connection, context }
     }
 
     async fn get_order(&mut self, order_id: Vec<u8>) -> Result<Order> {
@@ -73,7 +73,7 @@ mod tests {
         context::{AppConfig, AppContext},
         dao::{
             models::Order,
-            redis::{OrderDao, UserImpl},
+            redis::{OrderDao, OrderImpl},
         },
     };
     use slog::{o, Drain};
@@ -97,7 +97,7 @@ mod tests {
             logger: slog::Logger::root(drain, o!()),
         };
 
-        let mut user_dao = UserImpl::new(context);
+        let mut user_dao = OrderImpl::new(context);
 
         let mut expected_order = Order::default();
         expected_order.id = vec![1, 2, 3, 4];
