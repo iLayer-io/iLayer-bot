@@ -24,3 +24,4 @@ tokio = { version = "1.42.0", features = ["full"] }
 chrono = { version = "0.4.39", features = ["serde"] }
 redis = { version = "0.27.6", features = ["r2d2"] }
 hex = "0.4.3"
+slog-envlogger = "2.2.0"

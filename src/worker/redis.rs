@@ -1,11 +1,14 @@
 use eyre::Result;
-use slog::info;
 
 use crate::context::AppContext;
 
 pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
     loop {
         tokio::time::sleep(tokio::time::Duration::from_millis(context.config.redis_poll_interval)).await;
-        info!(context.logger, "Polling for ready orders to fill...");
+        // TODO:
+        // 1. Get all ready orders from Redis
+        // 2. Try to Fill the Orders
+        //   - call fillOrder on the target smart contract's router
+        // 3. If successful, mark as done the Redis order
     }
 }

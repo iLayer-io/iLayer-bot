@@ -1,7 +1,7 @@
 use crate::context::AppContext;
 use eyre::Result;
 use redis::{Commands, Connection};
-use slog::info;
+use slog::debug;
 
 use super::models::Order;
 
@@ -28,13 +28,13 @@ impl<'a> OrderDao<'a> for UserImpl<'a> {
     async fn get_order(&mut self, order_id: Vec<u8>) -> Result<Order> {
         let order_id = hex::encode(order_id);
         let redis_id = format!("order:{}", order_id);
-        info!(self.context.logger, "Getting order from Redis..."; "order" => format!("{:?}", redis_id));
+        debug!(self.context.logger, "Getting order from Redis..."; "order" => format!("{:?}", redis_id));
 
         let result = self.connection.get(redis_id).map_err(|e| eyre::eyre!(e));
 
         let order_json: String = result?;
         let order: Order = serde_json::from_str(&order_json)?;
-        info!(self.context.logger, "Got Order from Redis!"; "order" => format!("{:?}", order));
+        debug!(self.context.logger, "Got Order from Redis!"; "order" => format!("{:?}", order));
 
         return Ok(order);
     }
@@ -44,25 +44,25 @@ impl<'a> OrderDao<'a> for UserImpl<'a> {
         let order_id = hex::encode(&order.id);
         let redis_id = format!("order:{}", order_id);
 
-        info!(self.context.logger, "Creating order from Redis..."; "order" => format!("{:?}", redis_id));
+        debug!(self.context.logger, "Creating Redis order..."; "order" => format!("{:?}", redis_id));
         let result = self
             .connection
             .set(redis_id, &order_json)
             .map_err(|e| eyre::eyre!(e));
 
-        info!(self.context.logger, "Create order succeeded!"; "result" => format!("{:?}", result));
+        debug!(self.context.logger, "Create order succeeded!"; "result" => format!("{:?}", result));
         return result;
     }
 
     async fn delete_order(&mut self, order_id: Vec<u8>) -> Result<()> {
         let order_id = hex::encode(order_id);
         let redis_id = format!("order:{}", order_id);
-        info!(self.context.logger, "Deleting order from Redis..."; "order" => format!("{:?}", redis_id));
+        debug!(self.context.logger, "Deleting order from Redis..."; "order" => format!("{:?}", redis_id));
 
         // TODO Redis returns how many rows were effected, maybe check that?
         let result: Result<(), _> = self.connection.del(redis_id).map_err(|e| eyre::eyre!(e));
 
-        info!(self.context.logger, "Delete order succeeded!"; "result" => format!("{:?}", result));
+        debug!(self.context.logger, "Delete order succeeded!"; "result" => format!("{:?}", result));
         return result;
     }
 }
