@@ -8,8 +8,8 @@ pub struct Order {
     pub source_chain_selector: Vec<u8>,
     pub destination_chain_selector: Vec<u8>,
     pub sponsored: bool,
-    pub primary_filler_deadline: chrono::DateTime<chrono::Utc>,
-    pub deadline: chrono::DateTime<chrono::Utc>,
+    pub primary_filler_deadline: i64,
+    pub deadline: i64,
     pub call_recipient: Vec<u8>,
     pub call_data: Vec<u8>,
 }

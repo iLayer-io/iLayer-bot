@@ -36,12 +36,6 @@ pub fn map_solidity_order_to_model(
 
     let call_data = order.callData.to_vec();
 
-    let primary_filler_deadline =
-        chrono::DateTime::from_timestamp(order.primaryFillerDeadline.to(), 0)
-            .ok_or_else(|| eyre::eyre!("Invalid primaryFillerDeadline timestamp"))?;
-    let deadline = chrono::DateTime::from_timestamp(order.deadline.to(), 0)
-        .ok_or_else(|| eyre::eyre!("Invalid deadline timestamp"))?;
-
     Ok(models::Order {
         user: user,
         id: order_id,
@@ -50,8 +44,8 @@ pub fn map_solidity_order_to_model(
         destination_chain_selector: order.destinationChainSelector.as_le_bytes().to_vec(),
         sponsored: order.sponsored,
         // TODO Map deadlines to DateTime
-        primary_filler_deadline: primary_filler_deadline,
-        deadline: deadline,
+        primary_filler_deadline: order.primaryFillerDeadline.to(),
+        deadline: order.deadline.to(),
         call_recipient: call_recipient,
         call_data: call_data,
     })
@@ -182,8 +176,8 @@ mod tests {
             0, 0, 0, 0,
         ];
         let sponsored = false;
-        let primary_filler_deadline = chrono::DateTime::from_timestamp(1735566882, 0).unwrap();
-        let deadline = chrono::DateTime::from_timestamp(1755556882, 0).unwrap();
+        let primary_filler_deadline = 1735566882;
+        let deadline = 1755556882;
         let call_recipient = vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
