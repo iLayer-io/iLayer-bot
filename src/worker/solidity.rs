@@ -1,10 +1,8 @@
 use crate::{
-    context::AppContext,
-    dao::{self, redis::OrderDao},
-    solidity::{
+    context::AppContext, dao::{self, sql::OrderDao}, solidity::{
         map_solidity_order_to_model,
         Orderbook::{OrderCreated, OrderFilled, OrderWithdrawn},
-    },
+    }
 };
 use alloy::{
     primitives::Address,
@@ -24,7 +22,7 @@ pub async fn process_order_withdrawn_log(
 ) -> Result<()> {
     info!(context.logger, "Processing Order Withdrawn event..."; "log" => format!("{:?}", log.orderId));
 
-    let mut user_impl = dao::redis::OrderImpl::new(context);
+    let mut user_impl = dao::sql::OrderImpl::new(context);
     user_impl.delete_order(log.orderId.to_vec()).await?;
 
     info!(context.logger, "Order Withdrawn event processed successfully!"; "log" => format!("{:?}", log.orderId));
@@ -34,7 +32,7 @@ pub async fn process_order_withdrawn_log(
 pub async fn process_order_filled_log(context: &AppContext, log: Log<OrderFilled>) -> Result<()> {
     info!(context.logger, "Processing Order Filled event..."; "log" => format!("{:?}", log.orderId));
     
-    let mut user_impl = dao::redis::OrderImpl::new(context);
+    let mut user_impl = dao::sql::OrderImpl::new(context);
     user_impl.delete_order(log.orderId.to_vec()).await?;
 
     info!(context.logger, "Order Filled event processed successfully!"; "log" => format!("{:?}", log.orderId));
@@ -45,12 +43,13 @@ pub async fn process_order_created_log(context: &AppContext, log: Log<OrderCreat
     // TODO Check for order existence and skip if it already exists
     info!(context.logger, "Processing Order Created event..."; "log" => format!("{:?}", log.orderId));
 
-    let mut user_impl = dao::redis::OrderImpl::new(context);
-    let new_order = map_solidity_order_to_model(log.orderId.to_vec(), &log.order)?;
-    let _result = user_impl.create_order(&new_order).await?;
-
-    info!(context.logger, "Order Created event processed successfully!"; "log" => format!("{:?}", log.orderId));
-    Ok(())
+    let mut _user_impl = dao::sql::OrderImpl::new(context);
+    let _new_order = map_solidity_order_to_model(log.orderId.to_vec(), &log.order)?;
+    todo!();
+    // TODO FIXME: refactor to use SQL
+    // let _result = user_impl.create_order(&new_order).await?;
+    // info!(context.logger, "Order Created event processed successfully!"; "log" => format!("{:?}", log.orderId));
+    // Ok(())
 }
 
 pub async fn process_event_log(context: &AppContext, log: alloy::rpc::types::Log) -> Result<()> {

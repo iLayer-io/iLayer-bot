@@ -1,4 +1,4 @@
-use sea_orm_migration::{prelude::*, schema::*};
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -23,11 +23,11 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Order::Filler).string().not_null())
                     .col(ColumnDef::new(Order::SourceChainSelector).string().not_null())
                     .col(ColumnDef::new(Order::DestinationChainSelector).string().not_null())
-                    .col(ColumnDef::new(Order::Sponsored).string().not_null())
-                    .col(ColumnDef::new(Order::PrimaryFillerDeadline).string().not_null())
-                    .col(ColumnDef::new(Order::Deadline).string().not_null())
-                    .col(ColumnDef::new(Order::CallRecipient).string().not_null())
-                    .col(ColumnDef::new(Order::CallData).string().not_null())
+                    .col(ColumnDef::new(Order::Sponsored).boolean().not_null())
+                    .col(ColumnDef::new(Order::PrimaryFillerDeadline).date_time().not_null())
+                    .col(ColumnDef::new(Order::Deadline).date_time().not_null())
+                    .col(ColumnDef::new(Order::CallRecipient).string())
+                    .col(ColumnDef::new(Order::CallData).string())
                     .to_owned(),
             )
             .await

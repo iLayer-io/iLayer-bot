@@ -1,6 +1,6 @@
 use eyre::Result;
 
-use crate::{context::AppContext, dao::redis::{OrderDao, OrderImpl}};
+use crate::{context::AppContext, dao::sql::{OrderDao, OrderImpl}};
 
 pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
     loop {
