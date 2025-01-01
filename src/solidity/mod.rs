@@ -47,7 +47,8 @@ pub fn map_solidity_order_to_model(
         primary_filler_deadline: order.primaryFillerDeadline.to(),
         deadline: order.deadline.to(),
         call_recipient: call_recipient,
-        call_data: call_data,
+        call_data: call_data, 
+        // TODO FIXME add inputs and outputs
     })
 }
 

@@ -12,5 +12,17 @@ services:
       - ./docker/redis/scripts:/docker-entrypoint-initdb.d
     command: ["bash", "/docker-entrypoint-initdb.d/setup.sh"]
 
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: bot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
 volumes:
   redis-data:
+  postgres-data:
