@@ -183,6 +183,8 @@ mod tests {
         expected_order.primary_filler_deadline = Utc::now().add(chrono::Duration::days(1)).timestamp();
 
         user_dao.create_order(&expected_order).await.unwrap();
+        expected_order.id = vec![1, 2, 3, 5];
+        user_dao.create_order(&expected_order).await.unwrap();
         
         let orders = user_dao.get_ready_orders().await.unwrap();
 
