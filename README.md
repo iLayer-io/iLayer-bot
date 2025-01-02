@@ -19,7 +19,6 @@ ILayer Bot is a Rust application designed to fulfill ILayer orders efficiently.
 ```sh
 docker compose up -d # start the db
 cp example.env .env # configure the RPC url and other configs
-diesel setup # setup db and run migrations
 cargo run # start the bot
 ```
 
