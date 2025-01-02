@@ -112,6 +112,7 @@ pub async fn run_event_listener_subscription_worker(context: &AppContext) -> Res
         ])
         .from_block(from_block);
 
+    // TODO FIXME subscribe for blocks iof logs
     let sub = provider.subscribe_logs(&filter).await?;
     let mut stream = sub.into_stream();
 
