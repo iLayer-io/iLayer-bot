@@ -39,5 +39,5 @@ Note that e2e tests have a dependency on `docker-compose` and `anvil` to start t
 ## Migrations
 
 ```sh
-diesel migration run
+sea-orm-cli migrate refresh # NB. refresh undoes-redoes every migration, only for dev env
 ```

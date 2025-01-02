@@ -1,7 +1,7 @@
 use crate::context::AppContext;
-use chrono::{Utc, Duration, DateTime};
+use chrono::Utc;
 use eyre::Result;
-use redis::{Commands, Connection, ConnectionLike};
+use redis::{Commands, Connection};
 use slog::debug;
 
 use super::models::Order;
@@ -122,6 +122,7 @@ mod tests {
         // TODO Take config from (test?) env vars
         let context = &AppContext {
             config: AppConfig {
+                postgres_url: Default::default(),
                 redis_url: "redis://localhost:6379".to_string(),
                 rpc_url: Default::default(),
                 ws_url: Default::default(),
@@ -165,6 +166,7 @@ mod tests {
         // TODO Take config from (test?) env vars
         let context = &AppContext {
             config: AppConfig {
+                postgres_url: Default::default(),
                 redis_url: "redis://localhost:6379".to_string(),
                 rpc_url: Default::default(),
                 ws_url: Default::default(),
@@ -186,8 +188,8 @@ mod tests {
         expected_order.id = vec![1, 2, 3, 5];
         user_dao.create_order(&expected_order).await.unwrap();
         
-        let orders = user_dao.get_ready_orders().await.unwrap();
-
+        let _orders = user_dao.get_ready_orders().await.unwrap();
+        todo!()
 
     }
 }

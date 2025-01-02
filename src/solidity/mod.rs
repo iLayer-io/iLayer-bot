@@ -1,7 +1,7 @@
 use alloy::sol;
+use entity::order;
 use eyre::Result;
-
-use crate::dao::models;
+use sea_orm::ActiveValue;
 
 // TODO Wait for the fix to be tagged, then remove this.
 sol!(
@@ -23,7 +23,7 @@ sol!(
 pub fn map_solidity_order_to_model(
     order_id: Vec<u8>,
     order: &Validator::Order,
-) -> Result<models::Order> {
+) -> Result<order::ActiveModel> {
     // TODO FIXME: Improve error handling
     let mut user = order.user.lower.to_vec();
     user.extend(order.user.upper.iter());
@@ -34,20 +34,21 @@ pub fn map_solidity_order_to_model(
     let mut call_recipient = order.callRecipient.lower.to_vec();
     call_recipient.extend(order.callRecipient.upper.iter());
 
+    let deadline = chrono::DateTime::from_timestamp(order.deadline.to(), 0).unwrap();
+    let primary_filler_deadline = chrono::DateTime::from_timestamp(order.primaryFillerDeadline.to(), 0).unwrap();
     let call_data = order.callData.to_vec();
-
-    Ok(models::Order {
-        user: user,
-        id: order_id,
-        filler: filler,
-        source_chain_selector: order.sourceChainSelector.as_le_bytes().to_vec(),
-        destination_chain_selector: order.destinationChainSelector.as_le_bytes().to_vec(),
-        sponsored: order.sponsored,
-        // TODO Map deadlines to DateTime
-        primary_filler_deadline: order.primaryFillerDeadline.to(),
-        deadline: order.deadline.to(),
-        call_recipient: call_recipient,
-        call_data: call_data,
+    Ok(order::ActiveModel {
+        user: ActiveValue::set(user.into()),
+        order_id: ActiveValue::set(order_id),
+        filler: ActiveValue::set(filler),
+        source_chain_selector: ActiveValue::set(order.sourceChainSelector.as_le_bytes().to_vec()),
+        destination_chain_selector: ActiveValue::set(order.destinationChainSelector.as_le_bytes().to_vec()),
+        sponsored: ActiveValue::set(order.sponsored),
+        primary_filler_deadline: ActiveValue::set(primary_filler_deadline.naive_utc()),
+        deadline: ActiveValue::set(deadline.naive_utc()),
+        id: ActiveValue::NotSet,
+        call_recipient: ActiveValue::Set(Some(call_recipient)),
+        call_data: ActiveValue::Set(Some(call_data)),
     })
 }
 
@@ -96,6 +97,7 @@ mod tests {
     use alloy::{
         primitives::{Address, Bytes, FixedBytes, Log}, signers::local::PrivateKeySigner, sol_types::SolEvent
     };
+    use entity::order;
     use std::str::FromStr;
 
     use super::{map_solidity_order_to_model, Orderbook};
@@ -146,7 +148,7 @@ mod tests {
         let address = Address::from_str("0x8ce361602b935680e8dec218b820ff5056beb7af").unwrap();
         let log = Log::new(address, topics, data).unwrap();
         let order_created = Orderbook::OrderCreated::decode_log(&log, false).unwrap();
-        let actual: crate::dao::models::Order = map_solidity_order_to_model(
+        let actual: order::ActiveModel = map_solidity_order_to_model(
             "0x777a108f0d7d6ef99218eb59bc1900ed56d401db4fc9bbff76d85c68c5cb0168"
                 .as_bytes()
                 .to_vec(),
@@ -183,21 +185,18 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0,
         ];
-        let call_data = vec![];
+        let call_data: Vec<u8> = vec![];
 
-        let expected = crate::dao::models::Order {
-            user: user,
-            id: id,
-            filler: filler,
-            source_chain_selector: source_chain_selector,
-            destination_chain_selector: destination_chain_selector,
-            sponsored: sponsored,
-            primary_filler_deadline: primary_filler_deadline,
-            deadline: deadline,
-            call_recipient: call_recipient,
-            call_data: call_data,
-        };
-        assert_eq!(actual, expected);
+        assert_eq!(actual.user.unwrap(), user);
+        assert_eq!(actual.order_id.unwrap(), id);
+        assert_eq!(actual.filler.unwrap(), filler);
+        assert_eq!(actual.source_chain_selector.unwrap(), source_chain_selector);
+        assert_eq!(actual.destination_chain_selector.unwrap(), destination_chain_selector);
+        assert_eq!(actual.sponsored.unwrap(), sponsored);
+        assert_eq!(actual.primary_filler_deadline.unwrap().and_utc().timestamp(), primary_filler_deadline);
+        assert_eq!(actual.deadline.unwrap().and_utc().timestamp(), deadline);
+        assert_eq!(actual.call_recipient.unwrap().unwrap(), call_recipient);
+        assert_eq!(actual.call_data.unwrap().unwrap(), call_data);
     }
 
     #[test]
