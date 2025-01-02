@@ -73,7 +73,7 @@ mod tests {
                 ws_url: Default::default(),
                 order_contract_address: Default::default(),
                 from_block: Default::default(),
-                redis_poll_interval: Default::default(),
+                filler_poll_interval: Default::default(),
             },
             logger: slog::Logger::root(drain, o!()),
         };

@@ -9,7 +9,7 @@ pub struct AppConfig {
   pub ws_url: String,
   pub order_contract_address: String,
   pub postgres_url: String,
-  pub redis_poll_interval: u64,
+  pub filler_poll_interval: u64,
   pub from_block: Option<u64>,
 }
 

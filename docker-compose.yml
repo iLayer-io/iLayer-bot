@@ -23,5 +23,4 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
 volumes:
-  redis-data:
   postgres-data:
