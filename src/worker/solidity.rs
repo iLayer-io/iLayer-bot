@@ -1,8 +1,10 @@
 use crate::{
-    context::AppContext, dao::{self, sql::OrderDao}, solidity::{
+    context::AppContext,
+    dao::sql::new,
+    solidity::{
         map_solidity_order_to_model,
         Orderbook::{OrderCreated, OrderFilled, OrderWithdrawn},
-    }
+    },
 };
 use alloy::{
     primitives::Address,
@@ -12,7 +14,7 @@ use alloy::{
 use alloy::{primitives::Log, sol_types::SolEvent};
 use eyre::{Ok, Result};
 use futures_util::StreamExt;
-use slog::{debug, info, warn};
+use slog::{debug, info, trace, warn};
 
 use crate::solidity::Orderbook;
 
@@ -22,38 +24,48 @@ pub async fn process_order_withdrawn_log(
 ) -> Result<()> {
     info!(context.logger, "Processing Order Withdrawn event..."; "log" => format!("{:?}", log.orderId));
 
-    let mut user_impl = dao::sql::OrderImpl::new(context);
+    let mut user_impl = new(context).await?;
     user_impl.delete_order(log.orderId.to_vec()).await?;
 
     info!(context.logger, "Order Withdrawn event processed successfully!"; "log" => format!("{:?}", log.orderId));
     return Ok(());
 }
 
-pub async fn process_order_filled_log(context: &AppContext, log: Log<OrderFilled>) -> Result<()> {
+pub async fn process_order_filled_log(
+    context: &AppContext, 
+    log: Log<OrderFilled>,
+) -> Result<()> {
     info!(context.logger, "Processing Order Filled event..."; "log" => format!("{:?}", log.orderId));
-    
-    let mut user_impl = dao::sql::OrderImpl::new(context);
+
+    let mut user_impl = new(context).await?;
     user_impl.delete_order(log.orderId.to_vec()).await?;
 
     info!(context.logger, "Order Filled event processed successfully!"; "log" => format!("{:?}", log.orderId));
     Ok(())
 }
 
-pub async fn process_order_created_log(context: &AppContext, log: Log<OrderCreated>) -> Result<()> {
-    // TODO Check for order existence and skip if it already exists
+pub async fn process_order_created_log(
+    context: &AppContext, 
+    log: Log<OrderCreated>,
+) -> Result<()> {
     info!(context.logger, "Processing Order Created event..."; "log" => format!("{:?}", log.orderId));
 
-    let mut _user_impl = dao::sql::OrderImpl::new(context);
-    let _new_order = map_solidity_order_to_model(log.orderId.to_vec(), &log.order)?;
-    todo!();
-    // TODO FIXME: refactor to use SQL
-    // let _result = user_impl.create_order(&new_order).await?;
-    // info!(context.logger, "Order Created event processed successfully!"; "log" => format!("{:?}", log.orderId));
-    // Ok(())
+    let mut user_impl = new(context).await?;
+
+    let order_exists = user_impl.get_order(log.orderId.to_vec()).await.is_ok();
+    if order_exists {
+        info!(context.logger, "Order already exists, skipping..."; "log" => format!("{:?}", log.orderId));
+        return Ok(());
+    }
+
+    let new_order = map_solidity_order_to_model(log.orderId.to_vec(), &log.order)?;
+    user_impl.create_order(&new_order).await?;
+    info!(context.logger, "Order Created event processed successfully!"; "log" => format!("{:?}", log.orderId));
+    Ok(())
 }
 
 pub async fn process_event_log(context: &AppContext, log: alloy::rpc::types::Log) -> Result<()> {
-    debug!(context.logger, "Processing Event Log"; "log" => format!("{:?}", log.data()));
+    trace!(context.logger, "Processing Event Log"; "log" => format!("{:?}", log.data()));
     let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
     if order_created.is_ok() {
         let order_created = order_created.unwrap();
@@ -99,7 +111,6 @@ pub async fn run_event_listener_subscription_worker(context: &AppContext) -> Res
             Orderbook::OrderFilled::SIGNATURE,
         ])
         .from_block(from_block);
-
 
     let sub = provider.subscribe_logs(&filter).await?;
     let mut stream = sub.into_stream();
