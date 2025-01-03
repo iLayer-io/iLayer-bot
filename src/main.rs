@@ -16,38 +16,10 @@ async fn main() -> Result<()> {
     let app_context = Arc::new(context::context()?);
     info!(app_context.logger, "Main function is starting...");
 
-
-    // TODO FIXME Refactor, tokio should be used better here, it returns Ok(Err()) if the worker fails
-    let poll_worker_handle: tokio::task::JoinHandle<Result<(), eyre::Report>> = {
-        let config: Arc<context::AppContext> = Arc::clone(&app_context);
-        tokio::spawn(async move { 
-            worker::solidity::run_event_listener_poll_worker(&config).await?;
-            Ok(())
-        })
-    };
-
-    let poll_result = tokio::select! {
-        res = poll_worker_handle => res,
-    };
-
-    match poll_result {
-        Ok(Ok(())) => {
-            info!(app_context.logger, "Poll worker has terminated!");
-        },
-        Ok(Err(e)) => {
-            error!(app_context.logger, "Poll worker encountered an error: {:?}", e);
-            return Err(e.into());
-        },
-        Err(e) => {
-            error!(app_context.logger, "Poll worker encountered an error: {:?}", e);
-            return Err(e.into());
-        }
-    }
-
     let event_subscription_worker_handle: tokio::task::JoinHandle<Result<(), eyre::Report>> = {
         let config = Arc::clone(&app_context);
         tokio::spawn(async move {
-            worker::solidity::run_event_listener_subscription_worker(&config).await?;
+            worker::solidity::run_block_listener_poll_worker(&config).await?;
             Ok(())
         })
     };

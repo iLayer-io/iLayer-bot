@@ -9,7 +9,7 @@ use crate::{
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder},
-    rpc::types::Filter,
+    rpc::types::{BlockTransactionsKind, Filter},
 };
 use alloy::{primitives::Log, sol_types::SolEvent};
 use eyre::{Ok, Result};
@@ -31,10 +31,7 @@ pub async fn process_order_withdrawn_log(
     return Ok(());
 }
 
-pub async fn process_order_filled_log(
-    context: &AppContext, 
-    log: Log<OrderFilled>,
-) -> Result<()> {
+pub async fn process_order_filled_log(context: &AppContext, log: Log<OrderFilled>) -> Result<()> {
     info!(context.logger, "Processing Order Filled event..."; "log" => format!("{:?}", log.orderId));
 
     let mut user_impl = new(context).await?;
@@ -44,10 +41,7 @@ pub async fn process_order_filled_log(
     Ok(())
 }
 
-pub async fn process_order_created_log(
-    context: &AppContext, 
-    log: Log<OrderCreated>,
-) -> Result<()> {
+pub async fn process_order_created_log(context: &AppContext, log: Log<OrderCreated>) -> Result<()> {
     info!(context.logger, "Processing Order Created event..."; "log" => format!("{:?}", log.orderId));
 
     let mut user_impl = new(context).await?;
@@ -91,62 +85,98 @@ pub async fn process_event_log(context: &AppContext, log: alloy::rpc::types::Log
     Err(eyre::eyre!("Unable to decode log"))
 }
 
-pub async fn run_event_listener_subscription_worker(context: &AppContext) -> Result<()> {
-    // TODO FIXME: Refactor to subscribe to blocks and save processed blocks into DB
-    //   or use a more efficient way to process logs,
-    //   but we need to keep track of the last processed ones and avoid duplicates/out of order processing
-    let url = &context.config.ws_url;
-    let address: Address = context.config.order_contract_address.parse()?;
-    let from_block = context.config.from_block.unwrap_or(0);
-
-    info!(context.logger, "Subscription worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => from_block);
-
-    let provider = ProviderBuilder::new().on_builtin(url).await?;
-
-    let filter = Filter::new()
-        .address(address)
-        .events([
-            Orderbook::OrderCreated::SIGNATURE,
-            Orderbook::OrderWithdrawn::SIGNATURE,
-            Orderbook::OrderFilled::SIGNATURE,
-        ])
-        .from_block(from_block);
-
-    // TODO FIXME subscribe for blocks iof logs
-    let sub = provider.subscribe_logs(&filter).await?;
-    let mut stream = sub.into_stream();
-
-    while let Some(log) = stream.next().await {
-        process_event_log(context, log).await?;
-    }
-
-    info!(context.logger, "Subscription routine terminated!");
-    Ok(())
-}
-
-pub async fn run_event_listener_poll_worker(context: &AppContext) -> Result<()> {
-    // TODO FIXME: Save processed blocks into DB
+pub async fn run_block_listener_poll_worker(context: &AppContext) -> Result<()> {
     let url = &context.config.rpc_url;
     let address: Address = context.config.order_contract_address.parse()?;
-    let from_block = context.config.from_block.unwrap_or(0);
-    debug!(context.logger, "Poll worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => from_block);
-
+    // TODO Decide whether to take from DB or config
+    let mut starting_height = context.config.from_block.unwrap_or(0);
+    debug!(context.logger, "Poll worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => starting_height);
+    
     let provider = ProviderBuilder::new().on_builtin(url).await?;
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_millis(context.config.filler_poll_interval)).await;
+        let current_height = starting_height;
 
-    let filter = Filter::new()
-        .address(address)
-        .events([
-            Orderbook::OrderCreated::SIGNATURE,
-            Orderbook::OrderWithdrawn::SIGNATURE,
-            Orderbook::OrderFilled::SIGNATURE,
-        ])
-        .from_block(from_block);
+        // TODO decide whether to work with Safe or Finalized or Latest block
+        let latest_block = provider
+            .get_block_by_number(
+                alloy::eips::BlockNumberOrTag::Latest,
+                BlockTransactionsKind::Full,
+            )
+            .await?;
+        let latest_height = match latest_block {
+            Some(block) => block.header.number,
+            None => {
+                warn!(context.logger, "No latest block number found!");
+                current_height
+            }
+        };
 
-    let sub = provider.get_logs(&filter).await?;
+        if current_height == latest_height {
+            continue;
+        }
 
-    for log in sub {
-        process_event_log(context, log).await?;
+        for block_number in current_height..=latest_height {
+            debug!(
+                context.logger,
+                "Processing block number {}...", block_number
+            );
+
+            let filter = Filter::new()
+                .address(address)
+                .events([
+                    Orderbook::OrderCreated::SIGNATURE,
+                    Orderbook::OrderWithdrawn::SIGNATURE,
+                    Orderbook::OrderFilled::SIGNATURE,
+                ])
+                .from_block(block_number)
+                .to_block(block_number);
+
+            let sub = provider.get_logs(&filter).await?;
+            for log in sub {
+                process_event_log(context, log).await?;
+            }
+
+            starting_height = block_number;
+            debug!(
+                context.logger,
+                "Block number {} correctly processed!", block_number
+            );
+        }
     }
-
-    Ok(())
 }
+
+// // TODO NB. Subscription doesn't support the concept of Safe and Finalized blocks. it may not be suitable for us
+// //   NB. It start arising the need to use a custom blockchain node to be notified about new blocks.
+// pub async fn run_event_listener_subscription_worker(context: &AppContext) -> Result<()> {
+//     // TODO FIXME: Refactor to subscribe to blocks and save processed blocks into DB
+//     //   or use a more efficient way to process logs,
+//     //   but we need to keep track of the last processed ones and avoid duplicates/out of order processing
+//     let url = &context.config.ws_url;
+//     let address: Address = context.config.order_contract_address.parse()?;
+//     let from_block = context.config.from_block.unwrap_or(0);
+
+//     info!(context.logger, "Subscription worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => from_block);
+
+//     let provider = ProviderBuilder::new().on_builtin(url).await?;
+
+//     let filter = Filter::new()
+//         .address(address)
+//         .events([
+//             Orderbook::OrderCreated::SIGNATURE,
+//             Orderbook::OrderWithdrawn::SIGNATURE,
+//             Orderbook::OrderFilled::SIGNATURE,
+//         ])
+//         .from_block(from_block);
+
+//     // TODO FIXME subscribe for blocks iof logs
+//     let sub = provider.subscribe_logs(&filter).await?;
+//     let mut stream = sub.into_stream();
+
+//     while let Some(log) = stream.next().await {
+//         process_event_log(context, log).await?;
+//     }
+
+//     info!(context.logger, "Subscription routine terminated!");
+//     Ok(())
+// }
