@@ -1,7 +1,7 @@
 use eyre::Result;
 use slog::info;
 
-use crate::{context::AppContext, dao::sql::new};
+use crate::{context::AppContext, repository::sql::new};
 
 pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
     let mut order_dao = new(context).await?;

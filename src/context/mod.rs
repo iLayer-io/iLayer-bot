@@ -11,6 +11,7 @@ pub struct AppConfig {
   pub postgres_url: String,
   pub filler_poll_interval: u64,
   pub from_block: Option<u64>,
+  pub block_confirmations: u64,
 }
 
 

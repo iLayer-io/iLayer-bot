@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::{self};
 
 mod context;
-mod dao;
+mod repository;
 mod solidity;
 mod worker;
 
@@ -16,38 +16,33 @@ async fn main() -> Result<()> {
     let app_context = Arc::new(context::context()?);
     info!(app_context.logger, "Main function is starting...");
 
-    let event_subscription_worker_handle: tokio::task::JoinHandle<Result<(), eyre::Report>> = {
+    let block_subscription_worker_handle = {
         let config = Arc::clone(&app_context);
-        tokio::spawn(async move {
-            worker::solidity::run_block_listener_poll_worker(&config).await?;
+        async move {
+            worker::solidity::run_block_listener_subscription_worker(&config).await?;
             Ok(())
-        })
+        }
     };
 
     let order_filler_worker_handle = {
         let config = Arc::clone(&app_context);
-        tokio::spawn(async move { 
-            worker::filler::run_order_filler_worker(&config).await?;
-            Ok(()) 
-        })
+        async move {
+            if let Err(e) = worker::filler::run_order_filler_worker(&config).await {
+                return Err(e);
+            }
+            Ok(())
+        }
     };
 
     let result = tokio::select! {
         res = order_filler_worker_handle => ("order_filler_worker", res),
-        res = event_subscription_worker_handle => ("event_subscription_worker", res),
+        res = block_subscription_worker_handle => ("event_subscription_worker", res),
     };
 
     match result {
-        (worker_name, Ok(Ok(_))) => {
+        (worker_name, Ok(_)) => {
             warn!(app_context.logger, "{} has terminated unexpectedly", worker_name);
             Ok(())
-        },
-        (worker_name, Ok(Err(e))) => {
-            error!(
-                app_context.logger,
-                "{} encountered an error: {:?}", worker_name, e
-            );
-            Err(e.into())
         },
         (worker_name, Err(e)) => {
             error!(

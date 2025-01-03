@@ -1,6 +1,6 @@
 use crate::{
     context::AppContext,
-    dao::sql::new,
+    repository::sql::new,
     solidity::{
         map_solidity_order_to_model,
         Orderbook::{OrderCreated, OrderFilled, OrderWithdrawn},
@@ -88,64 +88,87 @@ pub async fn process_event_log(context: &AppContext, log: alloy::rpc::types::Log
 pub async fn run_block_listener_poll_worker(context: &AppContext) -> Result<()> {
     let url = &context.config.rpc_url;
     let address: Address = context.config.order_contract_address.parse()?;
-    // TODO Decide whether to take from DB or config
+    // TODO Take it from config only if it doesn't exist in the DB
     let mut starting_height = context.config.from_block.unwrap_or(0);
-    debug!(context.logger, "Poll worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => starting_height);
-    
+    let block_confirmations = context.config.block_confirmations;
+    debug!(context.logger, "Poll worker routine is starting!"; 
+        "url" => url, 
+        "address" => format!("{:?}", address), 
+        "from_block" => starting_height, 
+        "block_confirmations" => block_confirmations);
+
     let provider = ProviderBuilder::new().on_builtin(url).await?;
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_millis(context.config.filler_poll_interval)).await;
-        let current_height = starting_height;
+    let current_height = starting_height;
 
-        // TODO decide whether to work with Safe or Finalized or Latest block
-        let latest_block = provider
-            .get_block_by_number(
-                alloy::eips::BlockNumberOrTag::Latest,
-                BlockTransactionsKind::Full,
-            )
-            .await?;
-        let latest_height = match latest_block {
-            Some(block) => block.header.number,
-            None => {
-                warn!(context.logger, "No latest block number found!");
-                current_height
-            }
-        };
-
-        if current_height == latest_height {
-            continue;
+    // TODO decide whether to work with Safe or Finalized or Latest block
+    let latest_block = provider
+        .get_block_by_number(
+            alloy::eips::BlockNumberOrTag::Latest,
+            BlockTransactionsKind::Full,
+        )
+        .await?;
+    let latest_height = match latest_block {
+        Some(block) => block.header.number - block_confirmations,
+        None => {
+            warn!(context.logger, "No latest block number found!");
+            current_height
         }
+    };
 
-        for block_number in current_height..=latest_height {
-            debug!(
-                context.logger,
-                "Processing block number {}...", block_number
-            );
-
-            let filter = Filter::new()
-                .address(address)
-                .events([
-                    Orderbook::OrderCreated::SIGNATURE,
-                    Orderbook::OrderWithdrawn::SIGNATURE,
-                    Orderbook::OrderFilled::SIGNATURE,
-                ])
-                .from_block(block_number)
-                .to_block(block_number);
-
-            let sub = provider.get_logs(&filter).await?;
-            for log in sub {
-                process_event_log(context, log).await?;
-            }
-
-            starting_height = block_number;
-            debug!(
-                context.logger,
-                "Block number {} correctly processed!", block_number
-            );
-        }
+    if current_height == latest_height {
+        return Ok(());
     }
+
+    for block_number in current_height..=latest_height {
+        debug!(
+            context.logger,
+            "Processing block number {}...", block_number
+        );
+
+        let filter = Filter::new()
+            .address(address)
+            .events([
+                Orderbook::OrderCreated::SIGNATURE,
+                Orderbook::OrderWithdrawn::SIGNATURE,
+                Orderbook::OrderFilled::SIGNATURE,
+            ])
+            .from_block(block_number)
+            .to_block(block_number);
+
+        let sub = provider.get_logs(&filter).await?;
+        for log in sub {
+            process_event_log(context, log).await?;
+        }
+
+        starting_height = block_number;
+        debug!(
+            context.logger,
+            "Block number {} correctly processed!", block_number
+        );
+    }
+
+    Ok(())
 }
 
+pub async fn run_block_listener_subscription_worker(context: &AppContext) -> Result<()> {
+    let url = &context.config.ws_url;
+    let address: Address = context.config.order_contract_address.parse()?;
+    let from_block = context.config.from_block.unwrap_or(0);
+
+    info!(context.logger, "Subscription worker routine is starting!"; "url" => url, "address" => format!("{:?}", address), "from_block" => from_block);
+
+    let provider = ProviderBuilder::new().on_builtin(url).await?;
+
+    let sub = provider.subscribe_blocks().await?;
+    let mut stream = sub.into_stream();
+
+    while let Some(log) = stream.next().await {
+        run_block_listener_poll_worker(context).await?;
+    }
+
+    info!(context.logger, "Subscription routine terminated!");
+    Ok(())
+}
 // // TODO NB. Subscription doesn't support the concept of Safe and Finalized blocks. it may not be suitable for us
 // //   NB. It start arising the need to use a custom blockchain node to be notified about new blocks.
 // pub async fn run_event_listener_subscription_worker(context: &AppContext) -> Result<()> {
