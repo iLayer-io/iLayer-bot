@@ -19,7 +19,7 @@ pub async fn new<'a>(context: &'a AppContext) -> Result<OrderRepository<'a>> {
 
 impl<'a> OrderRepository<'a> {
 
-    pub async fn get_order(&mut self, order_id: Vec<u8>) -> Result<order::Model> {
+    pub async fn get_order(&self, order_id: Vec<u8>) -> Result<order::Model> {
         let order = Order::find()
         .filter(order::Column::OrderId.eq(order_id))
         .one(&self.connection)
@@ -27,12 +27,12 @@ impl<'a> OrderRepository<'a> {
         order.ok_or(eyre::eyre!("Order not found"))
     }
 
-    pub async fn create_order(&mut self, order: &ActiveModel) -> Result<()> {
+    pub async fn create_order(&self, order: &ActiveModel) -> Result<()> {
         order::Entity::insert(order.clone()).exec(&self.connection).await?;
         Ok(())
     }
 
-    pub async fn delete_order(&mut self, order_id: Vec<u8>) -> Result<()> {
+    pub async fn delete_order(&self, order_id: Vec<u8>) -> Result<()> {
         order::Entity::delete_many()
             .filter(order::Column::OrderId.eq(order_id))
             .exec(&self.connection)
@@ -40,7 +40,7 @@ impl<'a> OrderRepository<'a> {
         Ok(())
     }
 
-    pub async fn get_ready_orders(&mut self) -> Result<Vec<order::Model>> {
+    pub async fn get_ready_orders(&self) -> Result<Vec<order::Model>> {
         let ready_orders = Order::find()
         .filter(order::Column::Deadline.gt(chrono::Utc::now().naive_utc()))
         .all(&self.connection)
@@ -88,12 +88,12 @@ mod tests {
             call_data: ActiveValue::NotSet,
         };
         
-        let mut order_dao = super::new(context).await?;
+        let order_repository = super::new(context).await?;
         
-        order_dao.delete_order("order_id".as_bytes().to_vec()).await?;
-        order_dao.create_order(expected_order).await?;
-        let actual_order = order_dao.get_order("order_id".as_bytes().to_vec()).await?;
-        order_dao.delete_order("order_id".as_bytes().to_vec()).await?;
+        order_repository.delete_order("order_id".as_bytes().to_vec()).await?;
+        order_repository.create_order(expected_order).await?;
+        let actual_order = order_repository.get_order("order_id".as_bytes().to_vec()).await?;
+        order_repository.delete_order("order_id".as_bytes().to_vec()).await?;
         
         assert_eq!(expected_order.order_id.clone().unwrap(), actual_order.order_id); 
         Ok(())

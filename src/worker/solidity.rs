@@ -24,7 +24,7 @@ pub async fn process_order_withdrawn_log(
 ) -> Result<()> {
     info!(context.logger, "Processing Order Withdrawn event..."; "log" => format!("{:?}", log.orderId));
 
-    let mut user_impl = new(context).await?;
+    let user_impl = new(context).await?;
     user_impl.delete_order(log.orderId.to_vec()).await?;
 
     info!(context.logger, "Order Withdrawn event processed successfully!"; "log" => format!("{:?}", log.orderId));
@@ -34,7 +34,7 @@ pub async fn process_order_withdrawn_log(
 pub async fn process_order_filled_log(context: &AppContext, log: Log<OrderFilled>) -> Result<()> {
     info!(context.logger, "Processing Order Filled event..."; "log" => format!("{:?}", log.orderId));
 
-    let mut user_impl = new(context).await?;
+    let user_impl = new(context).await?;
     user_impl.delete_order(log.orderId.to_vec()).await?;
 
     info!(context.logger, "Order Filled event processed successfully!"; "log" => format!("{:?}", log.orderId));
@@ -44,7 +44,7 @@ pub async fn process_order_filled_log(context: &AppContext, log: Log<OrderFilled
 pub async fn process_order_created_log(context: &AppContext, log: Log<OrderCreated>) -> Result<()> {
     info!(context.logger, "Processing Order Created event..."; "log" => format!("{:?}", log.orderId));
 
-    let mut user_impl = new(context).await?;
+    let user_impl = new(context).await?;
 
     let order_exists = user_impl.get_order(log.orderId.to_vec()).await.is_ok();
     if order_exists {
@@ -89,7 +89,7 @@ pub async fn run_block_listener_poll_worker(context: &AppContext) -> Result<()> 
     let url = &context.config.rpc_url;
     let address: Address = context.config.order_contract_address.parse()?;
     // TODO Take it from config only if it doesn't exist in the DB
-    let mut starting_height = context.config.from_block.unwrap_or(0);
+    let starting_height = context.config.from_block.unwrap_or(0);
     let block_confirmations = context.config.block_confirmations;
     debug!(context.logger, "Poll worker routine is starting!"; 
         "url" => url, 
@@ -98,7 +98,7 @@ pub async fn run_block_listener_poll_worker(context: &AppContext) -> Result<()> 
         "block_confirmations" => block_confirmations);
 
     let provider = ProviderBuilder::new().on_builtin(url).await?;
-    let current_height = starting_height;
+
 
     // TODO decide whether to work with Safe or Finalized or Latest block
     let latest_block = provider
@@ -111,15 +111,15 @@ pub async fn run_block_listener_poll_worker(context: &AppContext) -> Result<()> 
         Some(block) => block.header.number - block_confirmations,
         None => {
             warn!(context.logger, "No latest block number found!");
-            current_height
+            starting_height
         }
     };
 
-    if current_height == latest_height {
+    if starting_height == latest_height {
         return Ok(());
     }
 
-    for block_number in current_height..=latest_height {
+    for block_number in starting_height..=latest_height {
         debug!(
             context.logger,
             "Processing block number {}...", block_number
@@ -140,7 +140,6 @@ pub async fn run_block_listener_poll_worker(context: &AppContext) -> Result<()> 
             process_event_log(context, log).await?;
         }
 
-        starting_height = block_number;
         debug!(
             context.logger,
             "Block number {} correctly processed!", block_number
@@ -162,7 +161,7 @@ pub async fn run_block_listener_subscription_worker(context: &AppContext) -> Res
     let sub = provider.subscribe_blocks().await?;
     let mut stream = sub.into_stream();
 
-    while let Some(log) = stream.next().await {
+    while let Some(_) = stream.next().await {
         run_block_listener_poll_worker(context).await?;
     }
 
