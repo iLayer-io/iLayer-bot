@@ -1,6 +1,6 @@
 use crate::{
     context::AppContext,
-    repository::sql::new,
+    repository::new,
     solidity::{
         map_solidity_order_to_model,
         Orderbook::{OrderCreated, OrderFilled, OrderWithdrawn},

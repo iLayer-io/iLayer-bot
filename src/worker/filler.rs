@@ -1,7 +1,7 @@
 use eyre::Result;
 use slog::info;
 
-use crate::{context::AppContext, repository::sql::new};
+use crate::{context::AppContext, repository::new};
 
 pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
     let order_repository = new(context).await?;
