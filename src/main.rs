@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use eyre::Result;
 use futures_util::future;
-use tokio::{self};
+use tokio::{self, task::JoinSet};
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
@@ -20,40 +20,23 @@ async fn main() -> Result<()> {
     let app_context = context::context()?;
     info!("Bot is starting...");
 
-    let mut futures: Vec<_> = app_context
-        .config
-        .chain
-        .iter()
-        .map(|chain: &context::ChainConfig| {
-            let name = chain.name.clone();
-            let w = worker::Worker::new(app_context.config.postgres_url.clone(), chain.clone());
-            async move {
-                (
-                    name,
-                    w.await.unwrap().run_block_listener_subscription().await,
-                )
-            }
-        })
-        .map(Box::pin)
-        .collect();
+    let mut set = JoinSet::new();
+
+    for chain in &app_context.config.chain {
+        info!("Starting worker for chain: {}", chain.name);
+        let worker = worker::Worker::new(app_context.config.postgres_url.clone(), chain.clone());
+        set.spawn(async move {
+            worker
+                .await
+                .unwrap()
+                .run_block_listener_subscription()
+                .await
+        });
+    }
 
     // Process futures dynamically
-    while !futures.is_empty() {
-        let (result, _, remaining) = future::select_all(futures).await;
-        futures = remaining;
-
-        match result {
-            (name, Ok(())) => {
-                return Err(eyre::eyre!("Worker {} has terminated unexpectedly!", name))
-            }
-            (name, Err(e)) => {
-                return Err(eyre::eyre!(
-                    "Worker {} has failed with error: {:?}",
-                    name,
-                    e
-                ))
-            }
-        }
+    while let Some(res) = set.join_next().await {
+        res??;
     }
 
     Ok(())
