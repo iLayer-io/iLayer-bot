@@ -54,24 +54,18 @@ impl<'a> OrderRepository<'a> {
 mod tests {
     use ::entity::order;
     use eyre::Ok;
-    use slog::o;
-    use slog::Drain;
     use crate::context::{AppConfig, AppContext};
     use sea_orm::*;
 
 
    #[tokio::test]
     async fn test_example_1() -> eyre::Result<()> {
-        let decorator = slog_term::TermDecorator::new().build();
-        let drain = std::sync::Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
-
         
         let context = &AppContext {
             config: AppConfig {
                 postgres_url: "postgres://postgres:postgres@localhost:5432/bot".to_string(),
                 ..Default::default()
             },
-            logger: slog::Logger::root(drain, o!()),
         };
 
         let expected_order = &order::ActiveModel {
