@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 use eyre::Result;
+use futures_util::future;
 use tokio::{self};
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -19,26 +20,46 @@ async fn main() -> Result<()> {
     let app_context = context::context()?;
     info!("Bot is starting...");
 
-    let workers: Vec<_> = app_context.config.chain.iter().map(|chain: &context::ChainConfig| {
-        worker::Worker::new(app_context.config.postgres_url.clone(), chain.clone()).run_block_listener_subscription()
-    }).collect();
+    let mut futures: Vec<_> = app_context.config.chain.iter().map(|chain: &context::ChainConfig| {
+        {
+            let name = chain.name.clone();
+            let w = worker::Worker::new(app_context.config.postgres_url.clone(), chain.clone());
+            async move {
+                (name, w.run_block_listener_subscription().await)
+            }
+        }
+    })
+    .map(Box::pin)
+    .collect();
 
+    // Process futures dynamically
+    while !futures.is_empty() {
+        let (result, _, remaining) = future::select_all(futures).await;
+        futures = remaining;
+
+        match result {
+            (name, Ok(())) => return Err(eyre::eyre!("Worker {} has terminated unexpectedly!", name)),
+            (name, Err(e)) => return Err(eyre::eyre!("Worker {} has failed with error: {:?}", name, e)),
+        }
+    }
+
+    Ok(())
 
     // let order_filler_worker_handle = worker::filler::run_order_filler_worker(&app_context);
 
-    let result = tokio::select! {
-        // res = order_filler_worker_handle => ("order_filler_worker", res),
-        res = block_subscription_handle => ("event_subscription_worker", res),
-    };
+    // let result = tokio::select! {
+    //     // res = order_filler_worker_handle => ("order_filler_worker", res),
+    //     res = block_subscription_handle => ("event_subscription_worker", res),
+    // };
 
-    match result {
-        (worker_name, Ok(_)) => {
-            warn!("{worker_name} has terminated unexpectedly!");
-            Ok(())
-        }
-        (worker_name, Err(e)) => {
-            error!("{worker_name} encountered an error: {e:?}");
-            Err(e.into())
-        }
-    }
+    // match result {
+    //     (worker_name, Ok(_)) => {
+    //         warn!("{worker_name} has terminated unexpectedly!");
+    //         Ok(())
+    //     }
+    //     (worker_name, Err(e)) => {
+    //         error!("{worker_name} encountered an error: {e:?}");
+    //         Err(e.into())
+    //     }
+    // }
 }
