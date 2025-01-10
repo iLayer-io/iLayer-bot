@@ -13,33 +13,47 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     rpc::types::{BlockTransactionsKind, Filter},
 };
-use eyre::{Ok, Result};
+use eyre::Result;
 use futures_util::StreamExt;
 use log::WorkerLog;
-use tracing::{debug, info, warn};
-pub(crate) struct Worker {
+use tracing::{debug, error, info, warn};
+
+pub(crate) struct Listener {
     chain_config: ChainConfig,
     order_repository: Arc<OrderRepository>,
 }
 
-impl Worker {
+impl Listener {
     pub async fn new(postgres_url: String, chain_config: ChainConfig) -> Result<Self> {
         let order_repository = Arc::new(OrderRepository::new(postgres_url).await?);
-        Ok(Worker {
+        Ok(Self {
             chain_config,
             order_repository,
         })
     }
 
-    pub async fn run_block_listener_poll(&self) -> Result<()> {
+    pub async fn run_subscription(&self) -> Result<()> {
+        loop {
+            match self._run_subscription().await {
+                Ok(()) => {}
+                Err(e) => {
+                    error!(
+                        error = %e,
+                        chain_id = self.chain_config.chain_id,
+                        "Error in filler service");
+                }
+            }
+
+            // TODO Maybe we should make this configurable?
+            tokio::time::sleep(std::time::Duration::from_secs(6)).await;
+        }
+    }
+
+    pub async fn run_polling(&self) -> Result<()> {
         let url = &self.chain_config.rpc_url;
         let address: Address = self.chain_config.order_contract_address.parse()?;
         // TODO Take it from config only if it doesn't exist in the DB
-        let starting_height = self.chain_config.start_block.unwrap_or(0);
-        debug!(
-            url, %address, from_block = starting_height,
-            "Poll worker routine is starting!"
-        );
+        let starting_block = self.chain_config.start_block.unwrap_or(0);
 
         let provider = ProviderBuilder::new().on_builtin(url).await?;
 
@@ -50,16 +64,24 @@ impl Worker {
                 BlockTransactionsKind::Full,
             )
             .await?;
-        let latest_height = match latest_block {
+
+        let latest_block = match latest_block {
             Some(block) => block.header.number,
             None => {
-                warn!("No latest block number found!");
-                starting_height
+                return Err(eyre::eyre!("No latest block number found"));
             }
         };
 
-        for block_number in starting_height..=latest_height {
-            debug!("Processing block number {block_number}...");
+        debug!(
+            url, %address, starting_block, latest_block,
+            "Polling routine starting!"
+        );
+
+        let mut from_block = starting_block;
+        while from_block <= latest_block {
+            let to_block = self.chain_config.block_batch_size.unwrap_or(1_000) + from_block;
+            let to_block = std::cmp::min(to_block, latest_block);
+            debug!(from_block, to_block, "Processing block batch...");
 
             let filter = Filter::new()
                 .address(address)
@@ -68,22 +90,26 @@ impl Worker {
                     Orderbook::OrderWithdrawn::SIGNATURE,
                     Orderbook::OrderFilled::SIGNATURE,
                 ])
-                .from_block(block_number)
-                .to_block(block_number);
+                .from_block(from_block)
+                .to_block(to_block);
 
+            // TODO index by chain id
             let sub = provider.get_logs(&filter).await?;
             for log in sub {
                 let worker_log = WorkerLog::new(Arc::clone(&self.order_repository)).await?;
                 worker_log.process_event_log(log).await?;
             }
 
-            debug!("Block number {block_number} correctly processed!");
+            debug!(from_block, to_block, latest_block, "Block batch processed!");
+
+            // TODO Save the last processed block number to the DB
+            from_block = to_block + 1;
         }
 
         Ok(())
     }
 
-    pub async fn run_block_listener_subscription(&self) -> Result<()> {
+    async fn _run_subscription(&self) -> Result<()> {
         let url = &self.chain_config.ws_url;
         let address: Address = self.chain_config.order_contract_address.parse()?;
         let start_block_height = self.chain_config.start_block.unwrap_or(0);
@@ -99,7 +125,7 @@ impl Worker {
         let mut stream = sub.into_stream();
 
         while let Some(_) = stream.next().await {
-            self.run_block_listener_poll().await?;
+            self.run_polling().await?;
         }
 
         info!("Subscription routine terminated!");

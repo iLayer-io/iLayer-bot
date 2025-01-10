@@ -10,7 +10,7 @@ pub struct ChainConfig {
     pub ws_url: String,
 
     pub start_block: Option<u64>,
-    pub block_batch_size: Option<u16>,
+    pub block_batch_size: Option<u64>,
     pub max_tx_retry: Option<u8>,
     pub min_order_val: u32,
     pub max_order_val: u32,
