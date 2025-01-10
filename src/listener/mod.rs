@@ -1,17 +1,18 @@
-pub mod filler;
 mod log;
 
 use std::sync::Arc;
 
 use crate::{
-    context::ChainConfig, repository::OrderRepository, solidity::Orderbook::{self}
+    context::ChainConfig,
+    repository::OrderRepository,
+    solidity::Orderbook::{self},
 };
+use alloy::sol_types::SolEvent;
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder},
     rpc::types::{BlockTransactionsKind, Filter},
 };
-use alloy::sol_types::SolEvent;
 use eyre::{Ok, Result};
 use futures_util::StreamExt;
 use log::WorkerLog;
@@ -24,7 +25,10 @@ pub(crate) struct Worker {
 impl Worker {
     pub async fn new(postgres_url: String, chain_config: ChainConfig) -> Result<Self> {
         let order_repository = Arc::new(OrderRepository::new(postgres_url).await?);
-        Ok(Worker { chain_config, order_repository })
+        Ok(Worker {
+            chain_config,
+            order_repository,
+        })
     }
 
     pub async fn run_block_listener_poll(&self) -> Result<()> {

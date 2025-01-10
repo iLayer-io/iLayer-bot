@@ -1,14 +1,13 @@
 use dotenv::dotenv;
 use eyre::Result;
-use futures_util::future;
 use tokio::{self, task::JoinSet};
-use tracing::{error, info, warn};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 mod context;
+mod listener;
 mod repository;
 mod solidity;
-mod worker;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -24,7 +23,7 @@ async fn main() -> Result<()> {
 
     for chain in &app_context.config.chain {
         info!("Starting worker for chain: {}", chain.name);
-        let worker = worker::Worker::new(app_context.config.postgres_url.clone(), chain.clone());
+        let worker = listener::Worker::new(app_context.config.postgres_url.clone(), chain.clone());
         set.spawn(async move {
             worker
                 .await
