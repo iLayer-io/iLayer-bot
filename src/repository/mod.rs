@@ -6,18 +6,11 @@ pub struct OrderRepository {
     pub connection: sea_orm::DatabaseConnection,
 }
 
-
 impl OrderRepository {
-
     pub async fn new(postgres_url: String) -> Result<Self> {
-        let connection: sea_orm::DatabaseConnection =
-            Database::connect(postgres_url).await?;
-        // TODO Use logger iof context?
-        Ok(OrderRepository {
-            connection,
-        })
+        let connection: sea_orm::DatabaseConnection = Database::connect(postgres_url).await?;
+        Ok(OrderRepository { connection })
     }
-
 
     pub async fn get_order(&self, order_id: Vec<u8>) -> Result<order::Model> {
         let order = Order::find()

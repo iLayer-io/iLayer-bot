@@ -20,17 +20,22 @@ async fn main() -> Result<()> {
     let app_context = context::context()?;
     info!("Bot is starting...");
 
-    let mut futures: Vec<_> = app_context.config.chain.iter().map(|chain: &context::ChainConfig| {
-        {
+    let mut futures: Vec<_> = app_context
+        .config
+        .chain
+        .iter()
+        .map(|chain: &context::ChainConfig| {
             let name = chain.name.clone();
             let w = worker::Worker::new(app_context.config.postgres_url.clone(), chain.clone());
             async move {
-                (name, w.run_block_listener_subscription().await)
+                (
+                    name,
+                    w.await.unwrap().run_block_listener_subscription().await,
+                )
             }
-        }
-    })
-    .map(Box::pin)
-    .collect();
+        })
+        .map(Box::pin)
+        .collect();
 
     // Process futures dynamically
     while !futures.is_empty() {
@@ -38,8 +43,16 @@ async fn main() -> Result<()> {
         futures = remaining;
 
         match result {
-            (name, Ok(())) => return Err(eyre::eyre!("Worker {} has terminated unexpectedly!", name)),
-            (name, Err(e)) => return Err(eyre::eyre!("Worker {} has failed with error: {:?}", name, e)),
+            (name, Ok(())) => {
+                return Err(eyre::eyre!("Worker {} has terminated unexpectedly!", name))
+            }
+            (name, Err(e)) => {
+                return Err(eyre::eyre!(
+                    "Worker {} has failed with error: {:?}",
+                    name,
+                    e
+                ))
+            }
         }
     }
 

@@ -1,8 +1,10 @@
 pub mod filler;
 mod log;
 
+use std::sync::Arc;
+
 use crate::{
-    context::ChainConfig, solidity::Orderbook::{self}
+    context::ChainConfig, repository::OrderRepository, solidity::Orderbook::{self}
 };
 use alloy::{
     primitives::Address,
@@ -16,12 +18,13 @@ use log::WorkerLog;
 use tracing::{debug, info, warn};
 pub(crate) struct Worker {
     chain_config: ChainConfig,
-    postgres_url: String,
+    order_repository: Arc<OrderRepository>,
 }
 
 impl Worker {
-    pub fn new(postgres_url: String, chain_config: ChainConfig) -> Self {
-        Worker { chain_config, postgres_url }
+    pub async fn new(postgres_url: String, chain_config: ChainConfig) -> Result<Self> {
+        let order_repository = Arc::new(OrderRepository::new(postgres_url).await?);
+        Ok(Worker { chain_config, order_repository })
     }
 
     pub async fn run_block_listener_poll(&self) -> Result<()> {
@@ -66,7 +69,7 @@ impl Worker {
 
             let sub = provider.get_logs(&filter).await?;
             for log in sub {
-                let worker_log = WorkerLog::new(self.postgres_url.clone()).await?;
+                let worker_log = WorkerLog::new(Arc::clone(&self.order_repository)).await?;
                 worker_log.process_event_log(log).await?;
             }
 

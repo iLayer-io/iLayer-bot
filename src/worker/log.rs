@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     repository::OrderRepository,
     solidity::{
@@ -9,13 +11,13 @@ use alloy::{primitives::Log, sol_types::SolEvent};
 use eyre::{Ok, Result};
 use tracing::{info, trace, warn};
 
-pub struct WorkerLog { // TODO Maybe find me a better name
-    order_repository: OrderRepository,
+pub struct WorkerLog {
+    // TODO Maybe find me a better name
+    order_repository: Arc<OrderRepository>,
 }
 
 impl WorkerLog {
-    pub async fn new(postgres_url: String) -> Result<Self> {
-        let order_repository = OrderRepository::new(postgres_url).await?;
+    pub async fn new(order_repository: Arc<OrderRepository>) -> Result<Self> {
         Ok(WorkerLog { order_repository })
     }
 
