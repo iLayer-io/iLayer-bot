@@ -17,16 +17,18 @@ async fn main() -> Result<()> {
     dotenv().ok();
 
     let app_context = context::context()?;
-    info!("Main function is starting...");
+    info!("Bot is starting...");
 
-    let block_subscription_worker_handle =
-        worker::run_block_listener_subscription_worker(&app_context);
+    let workers: Vec<_> = app_context.config.chain.iter().map(|chain: &context::ChainConfig| {
+        worker::Worker::new(app_context.config.postgres_url.clone(), chain.clone()).run_block_listener_subscription()
+    }).collect();
 
-    let order_filler_worker_handle = worker::filler::run_order_filler_worker(&app_context);
+
+    // let order_filler_worker_handle = worker::filler::run_order_filler_worker(&app_context);
 
     let result = tokio::select! {
-        res = order_filler_worker_handle => ("order_filler_worker", res),
-        res = block_subscription_worker_handle => ("event_subscription_worker", res),
+        // res = order_filler_worker_handle => ("order_filler_worker", res),
+        res = block_subscription_handle => ("event_subscription_worker", res),
     };
 
     match result {

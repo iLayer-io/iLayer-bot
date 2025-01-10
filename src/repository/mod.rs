@@ -2,23 +2,23 @@ use ::entity::order::{self, ActiveModel, Entity as Order};
 use eyre::{Ok, Result};
 use sea_orm::*;
 
-use crate::context::AppContext;
-
-pub struct OrderRepository<'a> {
-    pub _context: &'a AppContext,
+pub struct OrderRepository {
     pub connection: sea_orm::DatabaseConnection,
 }
-pub async fn new<'a>(context: &'a AppContext) -> Result<OrderRepository<'a>> {
-    let connection: sea_orm::DatabaseConnection =
-        Database::connect(context.config.postgres_url.clone()).await?;
-    // TODO Use logger iof context?
-    Ok(OrderRepository {
-        connection,
-        _context: context,
-    })
-}
 
-impl<'a> OrderRepository<'a> {
+
+impl OrderRepository {
+
+    pub async fn new(postgres_url: String) -> Result<Self> {
+        let connection: sea_orm::DatabaseConnection =
+            Database::connect(postgres_url).await?;
+        // TODO Use logger iof context?
+        Ok(OrderRepository {
+            connection,
+        })
+    }
+
+
     pub async fn get_order(&self, order_id: Vec<u8>) -> Result<order::Model> {
         let order = Order::find()
             .filter(order::Column::OrderId.eq(order_id))
@@ -53,19 +53,14 @@ impl<'a> OrderRepository<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::context::{AppConfig, AppContext};
+    use crate::repository::OrderRepository;
     use ::entity::order;
     use eyre::Ok;
     use sea_orm::*;
 
     #[tokio::test]
     async fn test_example_1() -> eyre::Result<()> {
-        let context = &AppContext {
-            config: AppConfig {
-                postgres_url: "postgres://postgres:postgres@localhost:5432/bot".to_string(),
-                ..Default::default()
-            },
-        };
+        let postgres_url = "postgres://postgres:postgres@localhost:5432/bot".to_string();
 
         let expected_order = &order::ActiveModel {
             user: ActiveValue::set("user".as_bytes().to_owned()),
@@ -83,7 +78,7 @@ mod tests {
             call_data: ActiveValue::NotSet,
         };
 
-        let order_repository = super::new(context).await?;
+        let order_repository = OrderRepository::new(postgres_url).await?;
 
         order_repository
             .delete_order("order_id".as_bytes().to_vec())
