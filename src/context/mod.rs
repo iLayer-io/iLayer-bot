@@ -1,7 +1,6 @@
 use config::{Config, ConfigError};
 use eyre::Result;
 use serde::Deserialize;
-use slog::{o, Drain};
 
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct ChainConfig {
@@ -42,7 +41,6 @@ pub struct AppConfig {
 
 pub struct AppContext {
     pub config: AppConfig,
-    pub logger: slog::Logger,
 }
 
 pub fn config() -> Result<AppConfig, ConfigError> {
@@ -51,17 +49,9 @@ pub fn config() -> Result<AppConfig, ConfigError> {
         .add_source(config::Environment::with_prefix("ILR"))
         .build()?;
 
-    let config = settings.try_deserialize::<AppConfig>()?;
-    Ok(config)
+    Ok(settings.try_deserialize::<AppConfig>()?)
 }
 
 pub fn context() -> Result<AppContext> {
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = std::sync::Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
-    let config = config()?;
-
-    return Ok(AppContext {
-        config,
-        logger: slog::Logger::root(drain, o!()),
-    });
+    Ok(AppContext { config: config()? })
 }

@@ -1,5 +1,5 @@
 use eyre::Result;
-use slog::info;
+use tracing::info;
 
 use crate::{context::AppContext, repository::new};
 
@@ -13,9 +13,8 @@ pub async fn run_order_filler_worker(context: &AppContext) -> Result<()> {
         let ready_orders = order_repository.get_ready_orders().await?;
         for order in ready_orders {
             info!(
-                context.logger,
-                "Trying to fill ready order with order_id: {:?}",
-                hex::encode(order.order_id)
+                order_id = hex::encode(order.order_id),
+                "Trying to fill ready order",
             );
             // TODO:
             // 2. Try to Fill the Orders

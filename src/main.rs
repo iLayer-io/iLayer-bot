@@ -1,8 +1,8 @@
 use dotenv::dotenv;
 use eyre::Result;
-use slog::{error, info, warn};
-use std::sync::Arc;
 use tokio::{self};
+use tracing::{error, info, warn};
+use tracing_subscriber::EnvFilter;
 
 mod context;
 mod repository;
@@ -11,10 +11,13 @@ mod worker;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let env_filter = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
+
     dotenv().ok();
 
     let app_context = context::context()?;
-    info!(app_context.logger, "Main function is starting...");
+    info!("Main function is starting...");
 
     let block_subscription_worker_handle =
         worker::run_block_listener_subscription_worker(&app_context);
@@ -28,17 +31,11 @@ async fn main() -> Result<()> {
 
     match result {
         (worker_name, Ok(_)) => {
-            warn!(
-                app_context.logger,
-                "{} has terminated unexpectedly", worker_name
-            );
+            warn!("{worker_name} has terminated unexpectedly!");
             Ok(())
         }
         (worker_name, Err(e)) => {
-            error!(
-                app_context.logger,
-                "{} encountered an error: {:?}", worker_name, e
-            );
+            error!("{worker_name} encountered an error: {e:?}");
             Err(e.into())
         }
     }
