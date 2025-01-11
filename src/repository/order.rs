@@ -35,9 +35,10 @@ impl OrderRepository {
         Ok(())
     }
 
-    pub async fn get_ready_orders(&self) -> Result<Vec<order::Model>> {
+    pub async fn get_ready_orders(&self, chain_id: u64) -> Result<Vec<order::Model>> {
         let ready_orders = Order::find()
             .filter(order::Column::Deadline.gt(chrono::Utc::now().naive_utc()))
+            .filter(order::Column::ChainId.eq(chain_id))
             .all(&self.connection)
             .await?;
         Ok(ready_orders)

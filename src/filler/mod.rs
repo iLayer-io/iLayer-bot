@@ -43,8 +43,11 @@ impl Filler {
             ))
             .await;
 
-            // TODO Filter by chain id
-            let ready_orders = self.order_repository.get_ready_orders().await?;
+            let ready_orders = self
+                .order_repository
+                .get_ready_orders(self.chain_config.chain_id)
+                .await?;
+
             for order in ready_orders {
                 info!(
                     order_id = hex::encode(order.order_id),
