@@ -19,13 +19,31 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Order::OrderId).binary().not_null().unique_key())
+                    .col(ColumnDef::new(Order::ChainId).big_unsigned().not_null())
+                    .col(
+                        ColumnDef::new(Order::OrderId)
+                            .binary()
+                            .not_null()
+                            .unique_key(),
+                    )
                     .col(ColumnDef::new(Order::User).binary().not_null())
                     .col(ColumnDef::new(Order::Filler).binary().not_null())
-                    .col(ColumnDef::new(Order::SourceChainSelector).binary().not_null())
-                    .col(ColumnDef::new(Order::DestinationChainSelector).binary().not_null())
+                    .col(
+                        ColumnDef::new(Order::SourceChainSelector)
+                            .binary()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Order::DestinationChainSelector)
+                            .binary()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Order::Sponsored).boolean().not_null())
-                    .col(ColumnDef::new(Order::PrimaryFillerDeadline).date_time().not_null())
+                    .col(
+                        ColumnDef::new(Order::PrimaryFillerDeadline)
+                            .date_time()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Order::Deadline).date_time().not_null())
                     .col(ColumnDef::new(Order::CallRecipient).binary())
                     .col(ColumnDef::new(Order::CallData).binary())
@@ -45,6 +63,7 @@ impl MigrationTrait for Migration {
 enum Order {
     Table,
     Id,
+    ChainId,
     OrderId,
     User,
     Filler,

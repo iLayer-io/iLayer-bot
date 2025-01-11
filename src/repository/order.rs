@@ -58,6 +58,7 @@ mod tests {
 
         let expected_order = &order::ActiveModel {
             user: ActiveValue::set("user".as_bytes().to_owned()),
+            chain_id: ActiveValue::set(1),
             order_id: ActiveValue::set("order_id".as_bytes().to_owned()),
             filler: ActiveValue::set("filler".as_bytes().to_owned()),
             source_chain_selector: ActiveValue::set("source_chain_selector".as_bytes().to_owned()),

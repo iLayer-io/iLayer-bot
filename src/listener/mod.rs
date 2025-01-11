@@ -123,7 +123,11 @@ impl Listener {
             // TODO should we use a db tx?
             let sub = provider.get_logs(&filter).await?;
             for log in sub {
-                let worker_log = WorkerLog::new(Arc::clone(&self.order_repository)).await?;
+                let worker_log = WorkerLog::new(
+                    Arc::clone(&self.order_repository),
+                    self.chain_config.chain_id,
+                )
+                .await?;
                 worker_log.process_event_log(log).await?;
             }
 

@@ -14,11 +14,15 @@ use tracing::{info, trace, warn};
 pub struct WorkerLog {
     // TODO Maybe find me a better name
     order_repository: Arc<OrderRepository>,
+    chain_id: u64,
 }
 
 impl WorkerLog {
-    pub async fn new(order_repository: Arc<OrderRepository>) -> Result<Self> {
-        Ok(WorkerLog { order_repository })
+    pub async fn new(order_repository: Arc<OrderRepository>, chain_id: u64) -> Result<Self> {
+        Ok(WorkerLog {
+            order_repository,
+            chain_id,
+        })
     }
 
     pub async fn process_order_withdrawn_log(&self, log: Log<OrderWithdrawn>) -> Result<()> {
@@ -27,9 +31,10 @@ impl WorkerLog {
             "Processing Order Withdrawn event"
         );
 
-        self.order_repository
-            .delete_order(log.orderId.to_vec())
-            .await?;
+        // TODO FIXME
+        // self.order_repository
+        //     .delete_order(log.orderId.to_vec())
+        //     .await?;
 
         info!(
             order_id = hex::encode(log.orderId),
@@ -44,9 +49,10 @@ impl WorkerLog {
             "Processing Order Filled event"
         );
 
-        self.order_repository
-            .delete_order(log.orderId.to_vec())
-            .await?;
+        // TODO FIXME
+        // self.order_repository
+        //     .delete_order(log.orderId.to_vec())
+        //     .await?;
 
         info!(
             order_id = hex::encode(log.orderId),
@@ -72,7 +78,8 @@ impl WorkerLog {
                 "Order already exists, skipping"
             );
         } else {
-            let new_order = map_solidity_order_to_model(log.orderId.to_vec(), &log.order)?;
+            let new_order =
+                map_solidity_order_to_model(self.chain_id, log.orderId.to_vec(), &log.order)?;
             self.order_repository.create_order(&new_order).await?;
             info!(
                 order_id = hex::encode(log.orderId),
