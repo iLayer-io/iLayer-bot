@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    repository::OrderRepository,
+    repository::order::OrderRepository,
     solidity::{
         map_solidity_order_to_model,
         Orderbook::{self, OrderCreated, OrderFilled, OrderWithdrawn},
@@ -24,7 +24,7 @@ impl WorkerLog {
     pub async fn process_order_withdrawn_log(&self, log: Log<OrderWithdrawn>) -> Result<()> {
         info!(
             order_id = hex::encode(log.orderId),
-            "Processing Order Withdrawn event..."
+            "Processing Order Withdrawn event"
         );
 
         self.order_repository
@@ -41,7 +41,7 @@ impl WorkerLog {
     pub async fn process_order_filled_log(&self, log: Log<OrderFilled>) -> Result<()> {
         info!(
             order_id = hex::encode(log.orderId),
-            "Processing Order Filled event..."
+            "Processing Order Filled event"
         );
 
         self.order_repository
@@ -58,7 +58,7 @@ impl WorkerLog {
     pub async fn process_order_created_log(&self, log: Log<OrderCreated>) -> Result<()> {
         info!(
             order_id = hex::encode(log.orderId),
-            "Processing Order Created event..."
+            "Processing Order Created event"
         );
 
         let order_exists = self
@@ -69,7 +69,7 @@ impl WorkerLog {
         if order_exists {
             info!(
                 order_id = hex::encode(log.orderId),
-                "Order already exists, skipping..."
+                "Order already exists, skipping"
             );
         } else {
             let new_order = map_solidity_order_to_model(log.orderId.to_vec(), &log.order)?;

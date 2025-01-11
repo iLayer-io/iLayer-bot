@@ -3,7 +3,7 @@ use std::sync::Arc;
 use eyre::Result;
 use tracing::{error, info};
 
-use crate::{context::ChainConfig, repository::OrderRepository};
+use crate::{context::ChainConfig, repository::order::OrderRepository};
 
 pub(crate) struct Filler {
     chain_config: ChainConfig,

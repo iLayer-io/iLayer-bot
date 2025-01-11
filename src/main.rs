@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
     dotenv().ok();
 
     let app_context = context::context()?;
-    info!("Bot is starting...");
+    info!("Bot is starting");
 
     let mut join_set = JoinSet::new();
 
