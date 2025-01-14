@@ -27,6 +27,7 @@ impl OrderRepository {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn delete_order(&self, order_id: Vec<u8>) -> Result<()> {
         order::Entity::delete_many()
             .filter(order::Column::OrderId.eq(order_id))

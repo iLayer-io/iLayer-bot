@@ -157,7 +157,7 @@ impl Listener {
         let sub = provider.subscribe_blocks().await?;
         let mut stream = sub.into_stream();
 
-        while let Some(_) = stream.next().await {
+        while (stream.next().await).is_some() {
             self.run_polling().await?;
         }
 

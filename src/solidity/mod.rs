@@ -41,7 +41,7 @@ pub fn map_solidity_order_to_model(
     let call_data = order.callData.to_vec();
     Ok(order::ActiveModel {
         chain_id: ActiveValue::set(chain_id as i64),
-        user: ActiveValue::set(user.into()),
+        user: ActiveValue::set(user),
         order_id: ActiveValue::set(order_id),
         filler: ActiveValue::set(filler),
         source_chain_selector: ActiveValue::set(order.sourceChainSelector.as_le_bytes().to_vec()),
