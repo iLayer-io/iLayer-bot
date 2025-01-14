@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use eyre::Result;
-use tracing::{error, info};
+use tracing::info;
 
-use crate::{context::ChainConfig, repository::order::OrderRepository};
+use crate::{context::ChainConfig, repository::order::OrderRepository, service::Service};
 
 pub(crate) struct Filler {
     chain_config: ChainConfig,
@@ -18,24 +18,9 @@ impl Filler {
             order_repository,
         })
     }
+}
 
-    pub async fn run(&self) -> Result<()> {
-        loop {
-            match self._run().await {
-                Ok(()) => {}
-                Err(e) => {
-                    error!(
-                        error = %e,
-                        chain_id = self.chain_config.chain_id,
-                        "Error in filler service");
-                }
-            }
-
-            // TODO Maybe we should make this configurable?
-            tokio::time::sleep(std::time::Duration::from_secs(6)).await;
-        }
-    }
-
+impl Service for Filler {
     async fn _run(&self) -> Result<()> {
         loop {
             tokio::time::sleep(tokio::time::Duration::from_millis(
@@ -59,5 +44,9 @@ impl Filler {
                 // 3. If successful, mark as done the order
             }
         }
+    }
+
+    fn service_name(&self) -> String {
+        format!("{} Filler", self.chain_config.name)
     }
 }

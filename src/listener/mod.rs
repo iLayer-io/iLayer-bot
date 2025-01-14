@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::{
     context::ChainConfig,
     repository::{block_checkpoint::BlockCheckpointRepository, order::OrderRepository},
+    service::Service,
     solidity::Orderbook::{self},
 };
 use alloy::sol_types::SolEvent;
@@ -16,7 +17,7 @@ use alloy::{
 use eyre::Result;
 use futures_util::StreamExt;
 use log::WorkerLog;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 pub(crate) struct Listener {
     chain_config: ChainConfig,
@@ -36,24 +37,7 @@ impl Listener {
         })
     }
 
-    pub async fn run_subscription(&self) -> Result<()> {
-        loop {
-            match self._run_subscription().await {
-                Ok(()) => {}
-                Err(e) => {
-                    error!(
-                        error = %e,
-                        chain_id = self.chain_config.chain_id,
-                        "Error in filler service");
-                }
-            }
-
-            // TODO Maybe we should make this configurable?
-            tokio::time::sleep(std::time::Duration::from_secs(6)).await;
-        }
-    }
-
-    pub async fn run_polling(&self) -> Result<()> {
+    async fn run_polling(&self) -> Result<()> {
         let url = &self.chain_config.rpc_url;
         let address: Address = self.chain_config.order_contract_address.parse()?;
         let block_batch_size = self.chain_config.block_batch_size.unwrap_or(1_000);
@@ -142,7 +126,7 @@ impl Listener {
         Ok(())
     }
 
-    async fn _run_subscription(&self) -> Result<()> {
+    async fn run_subscription(&self) -> Result<()> {
         let url = &self.chain_config.ws_url;
         let address: Address = self.chain_config.order_contract_address.parse()?;
         let start_block_height = self.chain_config.start_block.unwrap_or(0);
@@ -163,5 +147,16 @@ impl Listener {
 
         info!("Subscription routine terminated!");
         Ok(())
+    }
+}
+
+impl Service for Listener {
+    async fn _run(&self) -> Result<()> {
+        self.run_polling().await?;
+        self.run_subscription().await
+    }
+
+    fn service_name(&self) -> String {
+        format!("{} Listener", self.chain_config.name)
     }
 }
