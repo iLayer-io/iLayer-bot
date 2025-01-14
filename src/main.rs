@@ -1,6 +1,7 @@
 use dotenv::dotenv;
 use eyre::Result;
 use filler::Filler;
+use service::Service;
 use tokio::{self, task::JoinSet};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -9,6 +10,7 @@ mod context;
 mod filler;
 mod listener;
 mod repository;
+mod service;
 mod solidity;
 
 #[tokio::main]
@@ -27,15 +29,14 @@ async fn main() -> Result<()> {
         info!(chain_name = chain.name, "Starting services");
         let listener =
             listener::Listener::new(app_context.config.postgres_url.clone(), chain.clone());
-        join_set.spawn(async move { listener.await.unwrap().run_subscription().await });
+        join_set.spawn(async move { listener.await.unwrap().run().await });
 
         let filler = Filler::new(app_context.config.postgres_url.clone(), chain.clone());
-
         join_set.spawn(async move { filler.await.unwrap().run().await });
     }
 
     while let Some(res) = join_set.join_next().await {
-        res??;
+        res?;
     }
 
     Ok(())
