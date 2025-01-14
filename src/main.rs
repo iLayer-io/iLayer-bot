@@ -1,13 +1,15 @@
 use dotenv::dotenv;
 use eyre::Result;
-use tokio::{self};
-use tracing::{error, info, warn};
+use filler::Filler;
+use tokio::{self, task::JoinSet};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 mod context;
+mod filler;
+mod listener;
 mod repository;
 mod solidity;
-mod worker;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,26 +19,24 @@ async fn main() -> Result<()> {
     dotenv().ok();
 
     let app_context = context::context()?;
-    info!("Main function is starting...");
+    info!("Bot is starting");
 
-    let block_subscription_worker_handle =
-        worker::run_block_listener_subscription_worker(&app_context);
+    let mut join_set = JoinSet::new();
 
-    let order_filler_worker_handle = worker::filler::run_order_filler_worker(&app_context);
+    for chain in &app_context.config.chain {
+        info!(chain_name = chain.name, "Starting services");
+        let listener =
+            listener::Listener::new(app_context.config.postgres_url.clone(), chain.clone());
+        join_set.spawn(async move { listener.await.unwrap().run_subscription().await });
 
-    let result = tokio::select! {
-        res = order_filler_worker_handle => ("order_filler_worker", res),
-        res = block_subscription_worker_handle => ("event_subscription_worker", res),
-    };
+        let filler = Filler::new(app_context.config.postgres_url.clone(), chain.clone());
 
-    match result {
-        (worker_name, Ok(_)) => {
-            warn!("{worker_name} has terminated unexpectedly!");
-            Ok(())
-        }
-        (worker_name, Err(e)) => {
-            error!("{worker_name} encountered an error: {e:?}");
-            Err(e.into())
-        }
+        join_set.spawn(async move { filler.await.unwrap().run().await });
     }
+
+    while let Some(res) = join_set.join_next().await {
+        res??;
+    }
+
+    Ok(())
 }

@@ -2,4 +2,5 @@
 
 pub mod prelude;
 
+pub mod block_checkpoint;
 pub mod order;

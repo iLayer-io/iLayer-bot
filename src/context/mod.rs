@@ -3,6 +3,7 @@ use eyre::Result;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone, Default)]
+#[allow(dead_code)]
 pub struct ChainConfig {
     pub name: String,
     pub chain_id: u64,
@@ -10,7 +11,7 @@ pub struct ChainConfig {
     pub ws_url: String,
 
     pub start_block: Option<u64>,
-    pub block_batch_size: Option<u16>,
+    pub block_batch_size: Option<u64>,
     pub max_tx_retry: Option<u8>,
     pub min_order_val: u32,
     pub max_order_val: u32,
@@ -21,6 +22,7 @@ pub struct ChainConfig {
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
+#[allow(dead_code)]
 pub struct TokenConfig {
     pub name: String,
     pub symbol: String,
@@ -49,7 +51,7 @@ pub fn config() -> Result<AppConfig, ConfigError> {
         .add_source(config::Environment::with_prefix("ILR"))
         .build()?;
 
-    Ok(settings.try_deserialize::<AppConfig>()?)
+    settings.try_deserialize::<AppConfig>()
 }
 
 pub fn context() -> Result<AppContext> {
