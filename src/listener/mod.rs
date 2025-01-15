@@ -152,10 +152,13 @@ impl Listener {
         loop {
             let log = sub.blocking_recv()?;
             self.process_event_log(&log).await?;
-            if let Some(n) = log.block_number {
-                self.block_checkpoint_repository
-                    .create_block_checkpoint(self.chain_config.chain_id, n)
-                    .await?;
+            match log.block_number {
+                Some(n) => {
+                    self.block_checkpoint_repository
+                        .create_block_checkpoint(self.chain_config.chain_id, n)
+                        .await?
+                }
+                None => warn!(?log, "No block number found for log"),
             }
         }
     }
