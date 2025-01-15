@@ -147,7 +147,7 @@ impl Listener {
         let mut sub = provider.subscribe_logs(&filter).await?;
 
         loop {
-            let log = sub.blocking_recv()?;
+            let log = sub.recv().await?;
             self.process_event_log(&log).await?;
             match log.block_number {
                 Some(n) => {

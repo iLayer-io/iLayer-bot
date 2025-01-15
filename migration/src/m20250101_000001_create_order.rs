@@ -60,7 +60,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum Order {
+pub enum Order {
     Table,
     Id,
     ChainId,

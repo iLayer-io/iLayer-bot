@@ -4,6 +4,7 @@ use crate::solidity::{
 };
 
 use alloy::{primitives::Log, sol_types::SolEvent};
+use entity::sea_orm_active_enums::OrderStatus;
 use eyre::Result;
 use tracing::{info, trace, warn};
 
@@ -14,10 +15,9 @@ impl super::Listener {
             "Processing Order Withdrawn event"
         );
 
-        // TODO FIXME
-        // self.order_repository
-        //     .delete_order(log.orderId.to_vec())
-        //     .await?;
+        self.order_repository
+            .update_order_status(log.orderId.to_vec(), OrderStatus::Withdrawn)
+            .await?;
 
         info!(
             order_id = hex::encode(log.orderId),
@@ -32,10 +32,9 @@ impl super::Listener {
             "Processing Order Filled event"
         );
 
-        // TODO FIXME
-        // self.order_repository
-        //     .delete_order(log.orderId.to_vec())
-        //     .await?;
+        self.order_repository
+            .update_order_status(log.orderId.to_vec(), OrderStatus::Filled)
+            .await?;
 
         info!(
             order_id = hex::encode(log.orderId),
