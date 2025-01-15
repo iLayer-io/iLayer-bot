@@ -1,4 +1,7 @@
-use ::entity::order::{self, ActiveModel, Entity as Order};
+use ::entity::{
+    order::{self, ActiveModel, Entity as Order},
+    sea_orm_active_enums::OrderStatus,
+};
 use eyre::{Ok, Result};
 use sea_orm::*;
 
@@ -36,10 +39,30 @@ impl OrderRepository {
         Ok(())
     }
 
+    pub async fn update_order_status(
+        &self,
+        order_id: Vec<u8>,
+        order_status: OrderStatus,
+    ) -> Result<()> {
+        let mut order: ActiveModel = Order::find()
+            .filter(order::Column::OrderId.eq(order_id.clone()))
+            .one(&self.connection)
+            .await?
+            .ok_or(eyre::eyre!("Order not found"))?
+            .into();
+
+        order.order_status = ActiveValue::Set(order_status);
+
+        order.update(&self.connection).await?;
+        Ok(())
+    }
+
     pub async fn get_ready_orders(&self, chain_id: u64) -> Result<Vec<order::Model>> {
         let ready_orders = Order::find()
+            .filter(order::Column::PrimaryFillerDeadline.gt(chrono::Utc::now().naive_utc()))
             .filter(order::Column::Deadline.gt(chrono::Utc::now().naive_utc()))
             .filter(order::Column::ChainId.eq(chain_id))
+            .filter(order::Column::OrderStatus.eq(OrderStatus::Created))
             .all(&self.connection)
             .await?;
         Ok(ready_orders)
@@ -49,7 +72,7 @@ impl OrderRepository {
 #[cfg(test)]
 mod tests {
     use super::OrderRepository;
-    use ::entity::order;
+    use ::entity::{order, sea_orm_active_enums::OrderStatus};
     use eyre::Ok;
     use sea_orm::*;
 
@@ -73,6 +96,7 @@ mod tests {
             id: ActiveValue::NotSet,
             call_recipient: ActiveValue::NotSet,
             call_data: ActiveValue::NotSet,
+            order_status: ActiveValue::Set(OrderStatus::Created),
         };
 
         let order_repository = OrderRepository::new(postgres_url).await?;

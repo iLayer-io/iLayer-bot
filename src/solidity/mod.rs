@@ -1,5 +1,5 @@
 use alloy::sol;
-use entity::order;
+use entity::{order, sea_orm_active_enums::OrderStatus};
 use eyre::Result;
 use sea_orm::ActiveValue;
 
@@ -54,6 +54,7 @@ pub fn map_solidity_order_to_model(
         id: ActiveValue::NotSet,
         call_recipient: ActiveValue::Set(Some(call_recipient)),
         call_data: ActiveValue::Set(Some(call_data)),
+        order_status: ActiveValue::Set(OrderStatus::Created),
     })
 }
 

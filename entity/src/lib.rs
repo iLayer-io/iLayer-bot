@@ -4,3 +4,4 @@ pub mod prelude;
 
 pub mod block_checkpoint;
 pub mod order;
+pub mod sea_orm_active_enums;
