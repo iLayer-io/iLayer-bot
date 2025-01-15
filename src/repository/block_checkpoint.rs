@@ -12,12 +12,11 @@ impl BlockCheckpointRepository {
         Ok(Self { connection })
     }
 
-    pub async fn get_last_block_checkpoint(&self) -> Result<block_checkpoint::Model> {
-        let block = LastProcessedBlock::find()
+    pub async fn get_last_block_checkpoint(&self) -> Result<Option<block_checkpoint::Model>> {
+        Ok(LastProcessedBlock::find()
             .order_by_desc(block_checkpoint::Column::Height)
             .one(&self.connection)
-            .await?;
-        block.ok_or(eyre::eyre!("Last processed block not found"))
+            .await?)
     }
 
     pub async fn create_block_checkpoint(&self, chain_id: u64, height: u64) -> Result<()> {

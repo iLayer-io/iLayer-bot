@@ -42,27 +42,30 @@ impl Listener {
         let block_batch_size = self.chain_config.block_batch_size.unwrap_or(1_000);
 
         // Take the starting block height from the database, check if it is coherent with the configured starting block
-        let config_starting_block = self.chain_config.start_block.unwrap_or(0);
-        let starting_block = self
+        let config_starting_block = self.chain_config.start_block;
+        let db_starting_block = self
             .block_checkpoint_repository
             .get_last_block_checkpoint()
-            .await
-            .map_or(config_starting_block, |checkpoint| {
-                (checkpoint.height as u64) + 1
-            });
+            .await?
+            .map(|checkpoint| (checkpoint.height as u64) + 1);
 
-        if starting_block > config_starting_block {
-            warn!(
-                starting_block,
-                config_starting_block, "Taking the starting block height from the database"
-            );
-        }
-        if starting_block < config_starting_block {
-            return Err(eyre::eyre!(
-                "Starting block from the database is less than the configured starting block. \
-                Orders may remain stuck forever. Please fix the database inconsistency."
-            ));
-        }
+        let mut from_block = match (config_starting_block, db_starting_block) {
+            (Some(config_starting_block), Some(db_starting_block)) => {
+                if db_starting_block < config_starting_block {
+                    return Err(eyre::eyre!(
+                        "Starting block from the database is less than the configured starting block. \
+                        Orders may remain stuck forever. Please fix the database inconsistency."
+                    ));
+                }
+
+                db_starting_block
+            }
+            (None, Some(db_starting_block)) => db_starting_block,
+            (Some(config_starting_block), None) => config_starting_block,
+            (None, None) => {
+                return Ok(());
+            }
+        };
 
         let provider = ProviderBuilder::new().on_builtin(url).await?;
 
@@ -72,21 +75,19 @@ impl Listener {
                 alloy::eips::BlockNumberOrTag::Latest,
                 BlockTransactionsKind::Full,
             )
-            .await?;
-
-        let latest_block = match latest_block {
-            Some(block) => block.header.number,
-            None => {
-                return Err(eyre::eyre!("No latest block number found"));
-            }
-        };
+            .await?
+            .expect(&format!(
+                "Latest block must exist for chain {}",
+                self.chain_config.name
+            ))
+            .header
+            .number;
 
         debug!(
-            url, %address, config_starting_block, latest_block,
+            url, %address, from_block, latest_block,
             "Polling routine starting!"
         );
 
-        let mut from_block = config_starting_block;
         while from_block <= latest_block {
             let to_block = block_batch_size + from_block;
             let to_block = std::cmp::min(to_block, latest_block);
@@ -123,19 +124,18 @@ impl Listener {
     async fn run_subscription(&self) -> Result<()> {
         let url = &self.chain_config.ws_url;
         let address: Address = self.chain_config.order_contract_address.parse()?;
-        let start_block_height = self.chain_config.start_block.unwrap_or(0);
-
-        info!(
-            url, %address, start_block_height,
-            "Subscription worker routine is starting!"
-        );
 
         let starting_block = self
             .block_checkpoint_repository
             .get_last_block_checkpoint()
-            .await
+            .await?
             .map(|checkpoint| BlockNumberOrTag::Number(checkpoint.height as u64 + 1))
             .unwrap_or(BlockNumberOrTag::Finalized); // TODO: define if this should be Finalized or Latest
+
+        info!(
+            url, %address, ?starting_block,
+            "Subscription worker routine is starting!"
+        );
 
         let filter = Filter::new()
             .address(address)
