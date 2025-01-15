@@ -8,15 +8,14 @@ use crate::{
     service::Service,
     solidity::Orderbook::{self},
 };
-use alloy::sol_types::SolEvent;
 use alloy::{
+    eips::BlockNumberOrTag,
     primitives::Address,
     providers::{Provider, ProviderBuilder},
     rpc::types::{BlockTransactionsKind, Filter},
+    sol_types::SolEvent,
 };
 use eyre::Result;
-use futures_util::StreamExt;
-use log::WorkerLog;
 use tracing::{debug, info, warn};
 
 pub(crate) struct Listener {
@@ -107,12 +106,7 @@ impl Listener {
             // TODO should we use a db tx?
             let sub = provider.get_logs(&filter).await?;
             for log in sub {
-                let worker_log = WorkerLog::new(
-                    Arc::clone(&self.order_repository),
-                    self.chain_config.chain_id,
-                )
-                .await?;
-                worker_log.process_event_log(log).await?;
+                self.process_event_log(&log).await?;
             }
 
             debug!(from_block, to_block, latest_block, "Block batch processed!");
@@ -136,17 +130,34 @@ impl Listener {
             "Subscription worker routine is starting!"
         );
 
+        let starting_block = self
+            .block_checkpoint_repository
+            .get_last_block_checkpoint()
+            .await
+            .map(|checkpoint| BlockNumberOrTag::Number(checkpoint.height as u64 + 1))
+            .unwrap_or(BlockNumberOrTag::Finalized);
+
+        let filter = Filter::new()
+            .address(address)
+            .events([
+                Orderbook::OrderCreated::SIGNATURE,
+                Orderbook::OrderWithdrawn::SIGNATURE,
+                Orderbook::OrderFilled::SIGNATURE,
+            ])
+            .from_block(starting_block);
+
         let provider = ProviderBuilder::new().on_builtin(url).await?;
+        let mut sub = provider.subscribe_logs(&filter).await?;
 
-        let sub = provider.subscribe_blocks().await?;
-        let mut stream = sub.into_stream();
-
-        while (stream.next().await).is_some() {
-            self.run_polling().await?;
+        loop {
+            let log = sub.blocking_recv()?;
+            self.process_event_log(&log).await?;
+            if let Some(n) = log.block_number {
+                self.block_checkpoint_repository
+                    .create_block_checkpoint(self.chain_config.chain_id, n)
+                    .await?;
+            }
         }
-
-        info!("Subscription routine terminated!");
-        Ok(())
     }
 }
 

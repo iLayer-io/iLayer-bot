@@ -1,31 +1,14 @@
-use std::sync::Arc;
-
-use crate::{
-    repository::order::OrderRepository,
-    solidity::{
-        map_solidity_order_to_model,
-        Orderbook::{self, OrderCreated, OrderFilled, OrderWithdrawn},
-    },
+use crate::solidity::{
+    map_solidity_order_to_model,
+    Orderbook::{self, OrderCreated, OrderFilled, OrderWithdrawn},
 };
+
 use alloy::{primitives::Log, sol_types::SolEvent};
-use eyre::{Ok, Result};
+use eyre::Result;
 use tracing::{info, trace, warn};
 
-pub struct WorkerLog {
-    // TODO Maybe find me a better name
-    order_repository: Arc<OrderRepository>,
-    chain_id: u64,
-}
-
-impl WorkerLog {
-    pub async fn new(order_repository: Arc<OrderRepository>, chain_id: u64) -> Result<Self> {
-        Ok(WorkerLog {
-            order_repository,
-            chain_id,
-        })
-    }
-
-    pub async fn process_order_withdrawn_log(&self, log: Log<OrderWithdrawn>) -> Result<()> {
+impl super::Listener {
+    async fn process_order_withdrawn_log(&self, log: Log<OrderWithdrawn>) -> Result<()> {
         info!(
             order_id = hex::encode(log.orderId),
             "Processing Order Withdrawn event"
@@ -43,7 +26,7 @@ impl WorkerLog {
         Ok(())
     }
 
-    pub async fn process_order_filled_log(&self, log: Log<OrderFilled>) -> Result<()> {
+    async fn process_order_filled_log(&self, log: Log<OrderFilled>) -> Result<()> {
         info!(
             order_id = hex::encode(log.orderId),
             "Processing Order Filled event"
@@ -61,7 +44,7 @@ impl WorkerLog {
         Ok(())
     }
 
-    pub async fn process_order_created_log(&self, log: Log<OrderCreated>) -> Result<()> {
+    async fn process_order_created_log(&self, log: Log<OrderCreated>) -> Result<()> {
         info!(
             order_id = hex::encode(log.orderId),
             "Processing Order Created event"
@@ -78,8 +61,11 @@ impl WorkerLog {
                 "Order already exists, skipping"
             );
         } else {
-            let new_order =
-                map_solidity_order_to_model(self.chain_id, log.orderId.to_vec(), &log.order)?;
+            let new_order = map_solidity_order_to_model(
+                self.chain_config.chain_id,
+                log.orderId.to_vec(),
+                &log.order,
+            )?;
             self.order_repository.create_order(&new_order).await?;
             info!(
                 order_id = hex::encode(log.orderId),
@@ -89,7 +75,7 @@ impl WorkerLog {
         Ok(())
     }
 
-    pub async fn process_event_log(&self, log: alloy::rpc::types::Log) -> Result<()> {
+    pub async fn process_event_log(&self, log: &alloy::rpc::types::Log) -> Result<()> {
         trace!(log_data = ?log.data(), "Processing Event Log");
         let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
         if order_created.is_ok() {
