@@ -76,10 +76,7 @@ impl Listener {
                 BlockTransactionsKind::Full,
             )
             .await?
-            .expect(&format!(
-                "Latest block must exist for chain {}",
-                self.chain_config.name
-            ))
+            .expect("Latest block must exist!")
             .header
             .number;
 
