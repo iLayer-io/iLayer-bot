@@ -135,7 +135,7 @@ impl Listener {
             .get_last_block_checkpoint()
             .await
             .map(|checkpoint| BlockNumberOrTag::Number(checkpoint.height as u64 + 1))
-            .unwrap_or(BlockNumberOrTag::Finalized);
+            .unwrap_or(BlockNumberOrTag::Finalized); // TODO: define if this should be Finalized or Latest
 
         let filter = Filter::new()
             .address(address)
