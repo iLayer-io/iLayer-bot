@@ -22,17 +22,26 @@ pub(crate) struct Listener {
     chain_config: ChainConfig,
     order_repository: Arc<OrderRepository>,
     block_checkpoint_repository: Arc<BlockCheckpointRepository>,
+    redis_client: redis::Client,
 }
 
 impl Listener {
-    pub async fn new(postgres_url: String, chain_config: ChainConfig) -> Result<Self> {
+    pub async fn new(
+        postgres_url: String,
+        redis_url: String,
+        chain_config: ChainConfig,
+    ) -> Result<Self> {
         let order_repository = Arc::new(OrderRepository::new(postgres_url.clone()).await?);
         let block_checkpoint_repository =
             Arc::new(BlockCheckpointRepository::new(postgres_url.clone()).await?);
+
+        let redis_client = redis::Client::open(redis_url)?;
+
         Ok(Self {
             chain_config,
             order_repository,
             block_checkpoint_repository,
+            redis_client,
         })
     }
 
@@ -100,7 +109,6 @@ impl Listener {
                 .from_block(from_block)
                 .to_block(to_block);
 
-            // TODO index add chain_id column to the order table
             // TODO should we use a db tx?
             let sub = provider.get_logs(&filter).await?;
             for log in sub {
@@ -149,6 +157,10 @@ impl Listener {
         loop {
             let log = sub.recv().await?;
             self.process_event_log(&log).await?;
+            // TODO FIXME, we should (must?) work with blocks!
+            //  imagine a block with N logs, we process the first log, we save the checkpoint, and then the service crashes.
+            //  when it the service restarts, if the checkpoint has been saved correctly, we will lose the logs that were not processed.
+            //  we should save the checkpoint after all logs have been processed or otherwise consider restarting from the checkpoint height.
             match log.block_number {
                 Some(n) => {
                     self.block_checkpoint_repository

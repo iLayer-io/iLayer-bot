@@ -59,8 +59,8 @@ impl OrderRepository {
 
     pub async fn get_ready_orders(&self, chain_id: u64) -> Result<Vec<order::Model>> {
         let ready_orders = Order::find()
-            .filter(order::Column::PrimaryFillerDeadline.gt(chrono::Utc::now().naive_utc()))
-            .filter(order::Column::Deadline.gt(chrono::Utc::now().naive_utc()))
+            // .filter(order::Column::PrimaryFillerDeadline.gt(chrono::Utc::now().naive_utc()))
+            // .filter(order::Column::Deadline.gt(chrono::Utc::now().naive_utc()))
             .filter(order::Column::ChainId.eq(chain_id))
             .filter(order::Column::OrderStatus.eq(OrderStatus::Created))
             .all(&self.connection)

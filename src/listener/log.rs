@@ -75,6 +75,10 @@ impl super::Listener {
     }
 
     pub async fn process_event_log(&self, log: &alloy::rpc::types::Log) -> Result<()> {
+        // NB. this process_event_log function is called from both the run_subscription and run_polling functions.
+        // this function will be called also when processing logs "in batch" at the start of a "blockchain reindexing" process.
+        // we need to be careful to write it with idempotency in mind.
+
         trace!(log_data = ?log.data(), "Processing Event Log");
         let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
         if order_created.is_ok() {
