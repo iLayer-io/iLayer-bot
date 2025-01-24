@@ -7,6 +7,7 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 use watcher::Watcher;
 
+mod client;
 mod context;
 mod filler;
 mod listener;

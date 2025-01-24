@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use eyre::Result;
-use redis::AsyncCommands;
 
 use tracing::debug;
 
@@ -49,9 +48,10 @@ impl Service for Watcher {
                     "Publish on redis the ready order",
                 );
 
-                publish(
+                crate::client::redis::publish(
                     &mut self.redis_client.get_multiplexed_async_connection().await?,
                     order,
+                    self.chain_config.chain_id,
                 )
                 .await?;
             }
@@ -61,17 +61,4 @@ impl Service for Watcher {
     fn service_name(&self) -> String {
         format!("Watcher")
     }
-}
-
-async fn publish(
-    conn: &mut redis::aio::MultiplexedConnection,
-    order: entity::order::Model,
-) -> Result<()> {
-    let channel = "orders";
-    let message = serde_json::to_string(&order)?;
-    let _: () = conn
-        .publish(channel, message)
-        .await
-        .map_err(eyre::Error::from)?;
-    Ok(())
 }

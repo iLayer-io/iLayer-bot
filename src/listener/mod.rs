@@ -112,7 +112,7 @@ impl Listener {
             // TODO should we use a db tx?
             let sub = provider.get_logs(&filter).await?;
             for log in sub {
-                self.process_event_log(&log).await?;
+                self.process_event_log(&log, false).await?;
             }
 
             debug!(from_block, to_block, latest_block, "Block batch processed!");
@@ -156,7 +156,7 @@ impl Listener {
 
         loop {
             let log = sub.recv().await?;
-            self.process_event_log(&log).await?;
+            self.process_event_log(&log, true).await?;
             // TODO FIXME, we should (must?) work with blocks!
             //  imagine a block with N logs, we process the first log, we save the checkpoint, and then the service crashes.
             //  when it the service restarts, if the checkpoint has been saved correctly, we will lose the logs that were not processed.
