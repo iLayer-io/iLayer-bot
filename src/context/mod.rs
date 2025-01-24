@@ -39,6 +39,7 @@ pub struct TokenConfig {
 pub struct AppConfig {
     pub chain: Vec<ChainConfig>,
     pub postgres_url: String,
+    pub redis_url: String,
 }
 
 pub struct AppContext {

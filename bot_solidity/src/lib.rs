@@ -1,25 +1,17 @@
+use crate::OrderHub::bytes64;
 use alloy::sol;
 use entity::{order, sea_orm_active_enums::OrderStatus};
 use eyre::Result;
 use sea_orm::ActiveValue;
 
-// TODO Wait for the fix to be tagged, then remove this.
-sol!(
-    #[allow(missing_docs)]
-    #[derive(Debug, PartialEq, Eq)]
-    struct _bytes64 {
-        bytes32 lower;
-        bytes32 upper;
-    }
-);
-
 sol!(
     #[allow(missing_docs)]
     #[sol(rpc)]
-    Orderbook,
-    "abi/Orderbook.abi.json"
+    OrderHub,
+    "abi/OrderHub.abi.json"
 );
 
+// TODO Remove sea_orm dependency from this crate
 pub fn map_solidity_order_to_model(
     chain_id: u64,
     order_id: Vec<u8>,
@@ -71,7 +63,17 @@ impl std::fmt::Debug for Validator::Order {
             .finish()
     }
 }
-impl std::fmt::Debug for Orderbook::OrderCreated {
+
+impl std::fmt::Debug for bytes64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("bytes64")
+            .field("lower", &self.lower)
+            .field("upper", &self.upper)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for OrderHub::OrderCreated {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OrderCreated")
             .field("order", &self.order)
@@ -80,7 +82,7 @@ impl std::fmt::Debug for Orderbook::OrderCreated {
     }
 }
 
-impl std::fmt::Debug for Orderbook::OrderWithdrawn {
+impl std::fmt::Debug for OrderHub::OrderWithdrawn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OrderWithdrawn")
             .field("caller", &self.caller)
@@ -89,10 +91,9 @@ impl std::fmt::Debug for Orderbook::OrderWithdrawn {
     }
 }
 
-impl std::fmt::Debug for Orderbook::OrderFilled {
+impl std::fmt::Debug for OrderHub::OrderFilled {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OrderFilled")
-            .field("filler", &self.filler)
             .field("orderId", &self.orderId)
             .finish()
     }
@@ -108,7 +109,7 @@ mod tests {
     use entity::order;
     use std::str::FromStr;
 
-    use super::{map_solidity_order_to_model, Orderbook};
+    use super::{map_solidity_order_to_model, OrderHub};
 
     #[test]
     fn test_ordercreated_decode() {
@@ -155,7 +156,7 @@ mod tests {
 
         let address = Address::from_str("0x8ce361602b935680e8dec218b820ff5056beb7af").unwrap();
         let log = Log::new(address, topics, data).unwrap();
-        let order_created = Orderbook::OrderCreated::decode_log(&log, false).unwrap();
+        let order_created = OrderHub::OrderCreated::decode_log(&log, false).unwrap();
         let actual: order::ActiveModel = map_solidity_order_to_model(
             1,
             "0x777a108f0d7d6ef99218eb59bc1900ed56d401db4fc9bbff76d85c68c5cb0168"

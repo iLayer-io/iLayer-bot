@@ -1,12 +1,9 @@
 mod log;
 
-use std::sync::Arc;
-
 use crate::{
     context::ChainConfig,
     repository::{block_checkpoint::BlockCheckpointRepository, order::OrderRepository},
     service::Service,
-    solidity::Orderbook::{self},
 };
 use alloy::{
     eips::BlockNumberOrTag,
@@ -15,24 +12,35 @@ use alloy::{
     rpc::types::{BlockTransactionsKind, Filter},
     sol_types::SolEvent,
 };
+use bot_solidity::OrderHub::{self};
 use eyre::Result;
+use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 pub(crate) struct Listener {
     chain_config: ChainConfig,
     order_repository: Arc<OrderRepository>,
     block_checkpoint_repository: Arc<BlockCheckpointRepository>,
+    redis_client: redis::Client,
 }
 
 impl Listener {
-    pub async fn new(postgres_url: String, chain_config: ChainConfig) -> Result<Self> {
+    pub async fn new(
+        postgres_url: String,
+        redis_url: String,
+        chain_config: ChainConfig,
+    ) -> Result<Self> {
         let order_repository = Arc::new(OrderRepository::new(postgres_url.clone()).await?);
         let block_checkpoint_repository =
             Arc::new(BlockCheckpointRepository::new(postgres_url.clone()).await?);
+
+        let redis_client = redis::Client::open(redis_url)?;
+
         Ok(Self {
             chain_config,
             order_repository,
             block_checkpoint_repository,
+            redis_client,
         })
     }
 
@@ -80,8 +88,8 @@ impl Listener {
             .header
             .number;
 
-        debug!(
-            url, %address, from_block, latest_block,
+        info!(
+            chain_id=self.chain_config.chain_id, url, %address, from_block, latest_block,
             "Polling routine starting!"
         );
 
@@ -93,18 +101,17 @@ impl Listener {
             let filter = Filter::new()
                 .address(address)
                 .events([
-                    Orderbook::OrderCreated::SIGNATURE,
-                    Orderbook::OrderWithdrawn::SIGNATURE,
-                    Orderbook::OrderFilled::SIGNATURE,
+                    OrderHub::OrderCreated::SIGNATURE,
+                    OrderHub::OrderWithdrawn::SIGNATURE,
+                    OrderHub::OrderFilled::SIGNATURE,
                 ])
                 .from_block(from_block)
                 .to_block(to_block);
 
-            // TODO index add chain_id column to the order table
             // TODO should we use a db tx?
             let sub = provider.get_logs(&filter).await?;
             for log in sub {
-                self.process_event_log(&log).await?;
+                self.process_event_log(&log, false).await?;
             }
 
             debug!(from_block, to_block, latest_block, "Block batch processed!");
@@ -114,7 +121,10 @@ impl Listener {
                 .await?;
             from_block = to_block + 1;
         }
-
+        info!(
+            chain_id=self.chain_config.chain_id, url, %address, from_block, latest_block,
+            "Polling routine completed!"
+        );
         Ok(())
     }
 
@@ -137,9 +147,9 @@ impl Listener {
         let filter = Filter::new()
             .address(address)
             .events([
-                Orderbook::OrderCreated::SIGNATURE,
-                Orderbook::OrderWithdrawn::SIGNATURE,
-                Orderbook::OrderFilled::SIGNATURE,
+                OrderHub::OrderCreated::SIGNATURE,
+                OrderHub::OrderWithdrawn::SIGNATURE,
+                OrderHub::OrderFilled::SIGNATURE,
             ])
             .from_block(starting_block);
 
@@ -148,7 +158,11 @@ impl Listener {
 
         loop {
             let log = sub.recv().await?;
-            self.process_event_log(&log).await?;
+            self.process_event_log(&log, true).await?;
+            // TODO FIXME, we should (must?) work with blocks!
+            //  imagine a block with N logs, we process the first log, we save the checkpoint, and then the service crashes.
+            //  when it the service restarts, if the checkpoint has been saved correctly, we will lose the logs that were not processed.
+            //  we should save the checkpoint after all logs have been processed or otherwise consider restarting from the checkpoint height.
             match log.block_number {
                 Some(n) => {
                     self.block_checkpoint_repository

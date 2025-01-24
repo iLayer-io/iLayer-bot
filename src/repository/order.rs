@@ -23,11 +23,11 @@ impl OrderRepository {
         order.ok_or(eyre::eyre!("Order not found"))
     }
 
-    pub async fn create_order(&self, order: &ActiveModel) -> Result<()> {
-        order::Entity::insert(order.clone())
+    pub async fn create_order(&self, order: &ActiveModel) -> Result<i32> {
+        let insert_result = order::Entity::insert(order.clone())
             .exec(&self.connection)
             .await?;
-        Ok(())
+        Ok(insert_result.last_insert_id)
     }
 
     #[allow(dead_code)]
@@ -59,8 +59,8 @@ impl OrderRepository {
 
     pub async fn get_ready_orders(&self, chain_id: u64) -> Result<Vec<order::Model>> {
         let ready_orders = Order::find()
-            .filter(order::Column::PrimaryFillerDeadline.gt(chrono::Utc::now().naive_utc()))
-            .filter(order::Column::Deadline.gt(chrono::Utc::now().naive_utc()))
+            // .filter(order::Column::PrimaryFillerDeadline.gt(chrono::Utc::now().naive_utc()))
+            // .filter(order::Column::Deadline.gt(chrono::Utc::now().naive_utc()))
             .filter(order::Column::ChainId.eq(chain_id))
             .filter(order::Column::OrderStatus.eq(OrderStatus::Created))
             .all(&self.connection)
