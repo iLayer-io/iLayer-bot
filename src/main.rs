@@ -13,7 +13,6 @@ mod filler;
 mod listener;
 mod repository;
 mod service;
-mod solidity;
 mod watcher;
 
 #[tokio::main]

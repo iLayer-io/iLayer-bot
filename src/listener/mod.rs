@@ -1,12 +1,9 @@
 mod log;
 
-use std::sync::Arc;
-
 use crate::{
     context::ChainConfig,
     repository::{block_checkpoint::BlockCheckpointRepository, order::OrderRepository},
     service::Service,
-    solidity::Orderbook::{self},
 };
 use alloy::{
     eips::BlockNumberOrTag,
@@ -15,7 +12,9 @@ use alloy::{
     rpc::types::{BlockTransactionsKind, Filter},
     sol_types::SolEvent,
 };
+use bot_solidity::OrderHub::{self};
 use eyre::Result;
+use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 pub(crate) struct Listener {
@@ -89,8 +88,8 @@ impl Listener {
             .header
             .number;
 
-        debug!(
-            url, %address, from_block, latest_block,
+        info!(
+            chain_id=self.chain_config.chain_id, url, %address, from_block, latest_block,
             "Polling routine starting!"
         );
 
@@ -102,9 +101,9 @@ impl Listener {
             let filter = Filter::new()
                 .address(address)
                 .events([
-                    Orderbook::OrderCreated::SIGNATURE,
-                    Orderbook::OrderWithdrawn::SIGNATURE,
-                    Orderbook::OrderFilled::SIGNATURE,
+                    OrderHub::OrderCreated::SIGNATURE,
+                    OrderHub::OrderWithdrawn::SIGNATURE,
+                    OrderHub::OrderFilled::SIGNATURE,
                 ])
                 .from_block(from_block)
                 .to_block(to_block);
@@ -122,7 +121,10 @@ impl Listener {
                 .await?;
             from_block = to_block + 1;
         }
-
+        info!(
+            chain_id=self.chain_config.chain_id, url, %address, from_block, latest_block,
+            "Polling routine completed!"
+        );
         Ok(())
     }
 
@@ -145,9 +147,9 @@ impl Listener {
         let filter = Filter::new()
             .address(address)
             .events([
-                Orderbook::OrderCreated::SIGNATURE,
-                Orderbook::OrderWithdrawn::SIGNATURE,
-                Orderbook::OrderFilled::SIGNATURE,
+                OrderHub::OrderCreated::SIGNATURE,
+                OrderHub::OrderWithdrawn::SIGNATURE,
+                OrderHub::OrderFilled::SIGNATURE,
             ])
             .from_block(starting_block);
 

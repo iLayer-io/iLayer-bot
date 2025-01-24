@@ -1,6 +1,6 @@
-use crate::solidity::{
+use bot_solidity::{
     map_solidity_order_to_model,
-    Orderbook::{self, OrderCreated, OrderFilled, OrderWithdrawn},
+    OrderHub::{self, OrderCreated, OrderFilled, OrderWithdrawn},
 };
 
 use alloy::{primitives::Log, sol_types::SolEvent};
@@ -67,12 +67,14 @@ impl super::Listener {
             return Ok(());
         }
 
-        let new_order = map_solidity_order_to_model(
+        let mut new_order = map_solidity_order_to_model(
             self.chain_config.chain_id,
             log.orderId.to_vec(),
             &log.order,
         )?;
-        self.order_repository.create_order(&new_order).await?;
+
+        new_order.id =
+            sea_orm::ActiveValue::Set(self.order_repository.create_order(&new_order).await?);
 
         if should_publish_to_redis {
             crate::client::redis::publish(
@@ -100,7 +102,7 @@ impl super::Listener {
         // we need to be careful to write it with idempotency in mind.
 
         trace!(log_data = ?log.data(), "Processing Event Log");
-        let order_created = Orderbook::OrderCreated::decode_log(&log.inner, false);
+        let order_created = OrderHub::OrderCreated::decode_log(&log.inner, false);
         if order_created.is_ok() {
             let order_created = order_created.unwrap();
             self.process_order_created_log(order_created.clone(), should_publish_to_redis)
@@ -108,14 +110,14 @@ impl super::Listener {
             return Ok(());
         }
 
-        let order_filled = Orderbook::OrderFilled::decode_log(&log.inner, false);
+        let order_filled = OrderHub::OrderFilled::decode_log(&log.inner, false);
         if order_filled.is_ok() {
             let order_filled = order_filled.unwrap();
             self.process_order_filled_log(order_filled.clone()).await?;
             return Ok(());
         }
 
-        let order_withdrawn = Orderbook::OrderWithdrawn::decode_log(&log.inner, false);
+        let order_withdrawn = OrderHub::OrderWithdrawn::decode_log(&log.inner, false);
         if order_withdrawn.is_ok() {
             let order_withdrawn = order_withdrawn.unwrap();
             self.process_order_withdrawn_log(order_withdrawn.clone())

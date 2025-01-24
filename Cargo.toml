@@ -5,14 +5,14 @@ edition = "2021"
 readme = "README.md"
 
 [workspace]
-members = [".", "entity", "migration"]
+members = [".", "entity", "migration", "bot_solidity"]
 
 [[bin]]
 name = "bot"
 path = "src/main.rs"
 
 [dependencies]
-alloy = { version = "0.8.3", features = ["full"] }
+alloy = { version = "0.9.2", features = ["full"] }
 config = "0.15.4"
 dotenv = "0.15.0"
 eyre = "0.6.12"
@@ -29,6 +29,7 @@ sea-orm = { version = "1.1.4", features = [
     "macros",
 ] }
 entity = { path = "./entity" }
+bot_solidity = { path = "./bot_solidity" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 redis = { version = "0.28.1", features = ["aio", "tokio-comp"] }
